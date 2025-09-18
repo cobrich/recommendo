@@ -8,8 +8,8 @@ import (
 )
 
 type CreateFollowRequestDTO struct {
-	FromUserID int `json:"from_user_id"`
-	ToUserID   int `json:"to_user_id"`
+	FromUserID int `json:"follower_id"`
+	ToUserID   int `json:"following_id"`
 }
 
 type UserIDRequestDTO struct {
