@@ -103,3 +103,8 @@ Day3 19.09.2025
 Надо создать Post("/recommend") в JSON {fromID, toID, media{}}
 Список мне порекомендованных (/user/{userID}/recommendations) можно рядом указать кто порекомендовал
 Список который я порекомендовал (/user/{userID}/recommended) можно рядом указать кому порекомендовал
+
+Добавление работа с медиами
+
+
+(/user/{userID}/recommended) -> (/user/{userID}/recommendations/sent)

@@ -39,21 +39,24 @@ func main() {
 	userRepo := repo.NewUserRepo(db)
 	friendhipRepo := repo.NewFollowRepo(db)
 	mediaRepo := repo.NewMediaRepo(db)
+	recommendationRepo := repo.NewRecommendationRepo(db)
 
 	// Services
 	userService := service.NewUserService(userRepo)
 	friendshipService := service.NewFriendshipService(friendhipRepo)
 	mediaService := service.NewMediaService(mediaRepo)
+	recommendationService := service.NewRecommmendationService(recommendationRepo)
 
 	// Handlers
 	userHandler := handlers.NewUserHandler(userService)
 	friendshipHandler := handlers.NewFriendshiphandler(friendshipService)
 	mediaHandler := handlers.NewMediaHandler(mediaService)
+	recommendationHandler := handlers.NewRecommendationHandler(recommendationService)
 
 	fmt.Println("Сервер запущен на http://localhost:8080")
 
 	// Create router and set
-	router := router.NewRouter(userHandler, friendshipHandler, mediaHandler)
+	router := router.NewRouter(userHandler, friendshipHandler, mediaHandler, recommendationHandler)
 
 	// Run server in port 8080
 	log.Fatal(http.ListenAndServe(":8080", router))
