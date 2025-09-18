@@ -1,0 +1,17 @@
+# Go build files
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Binary executable
+# (the name of your project executable)
+recommendo 
+
+# Env file - NEVER commit secrets!
+.env
+
+# IDE settings folders
+.idea/
+.vscode/
