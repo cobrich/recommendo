@@ -42,3 +42,27 @@ func (s *UserService) GetUserFriends(ctx context.Context, id int) ([]models.User
 	}
 	return users, nil
 }
+
+func (s *UserService) GetUserFollowers(ctx context.Context, id int) ([]models.User, error) {
+	_, err := s.GetUserByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	users, err := s.r.GetUserFollowers(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
+func (s *UserService) GetUserFollowings(ctx context.Context, id int) ([]models.User, error) {
+	_, err := s.GetUserByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	users, err := s.r.GetUserFollowings(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
+}

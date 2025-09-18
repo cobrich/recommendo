@@ -98,7 +98,7 @@ func (h *UserHandler) GetUserFollowers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	users, err := h.s.GetUserFriends(r.Context(), id)
+	users, err := h.s.GetUserFollowers(r.Context(), id)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			http.Error(w, err.Error(), http.StatusNotFound)
@@ -129,7 +129,7 @@ func (h *UserHandler) GetUserFollowings(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	users, err := h.s.GetUserFriends(r.Context(), id)
+	users, err := h.s.GetUserFollowings(r.Context(), id)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			http.Error(w, err.Error(), http.StatusNotFound)

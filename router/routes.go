@@ -24,7 +24,7 @@ func NewRouter(userHandler *handlers.UserHandler, followHandler *handlers.Follow
 	// DELETE /follows - delete following
 	router.Delete("/follows", followHandler.DeleteFollow)
 
-	router.Post("/recommendations", recommendoHandler.CreateRecommendation)
+	// router.Post("/recommendations", recommendoHandler.CreateRecommendation)
 
 	return router
 }

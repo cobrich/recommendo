@@ -96,3 +96,69 @@ func (r *UserRepo) GetUserFriends(ctx context.Context, id int) ([]models.User, e
 	}
 	return users, nil
 }
+
+func (r *UserRepo) GetUserFollowers(ctx context.Context, id int) ([]models.User, error) {
+	var users []models.User
+
+	query := `
+		SELECT
+		    u.user_id,
+		    u.user_name,
+		    u.created_at
+		FROM
+		    follows f
+		JOIN
+		    users u ON u.user_id = f.follower_id
+		WHERE
+		    -- Условие: мы ищем тех, кто подписан на user.
+		    f.following_id = $1;
+	`
+
+	sqlRows, err := r.DB.QueryContext(ctx, query, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user friends: %w", err)
+	}
+
+	for sqlRows.Next() {
+		var user models.User
+
+		if err := sqlRows.Scan(&user.ID, &user.UserName, &user.CreatedAt); err != nil {
+			return nil, fmt.Errorf("ошибка сканирования строки: %w", err)
+		}
+		users = append(users, user)
+	}
+	return users, nil
+}
+
+func (r *UserRepo) GetUserFollowings(ctx context.Context, id int) ([]models.User, error) {
+	var users []models.User
+
+	query := `
+		SELECT
+		    u.user_id,
+		    u.user_name,
+		    u.created_at
+		FROM
+		    follows f
+		JOIN
+		    users u ON u.user_id = f.following_id
+		WHERE
+		    -- Условие: мы ищем тех, на кого подписан user ($1).
+		    f.follower_id = $1;
+	`
+
+	sqlRows, err := r.DB.QueryContext(ctx, query, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user friends: %w", err)
+	}
+
+	for sqlRows.Next() {
+		var user models.User
+
+		if err := sqlRows.Scan(&user.ID, &user.UserName, &user.CreatedAt); err != nil {
+			return nil, fmt.Errorf("ошибка сканирования строки: %w", err)
+		}
+		users = append(users, user)
+	}
+	return users, nil
+}
