@@ -7,7 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func NewRouter(userHandler *handlers.UserHandler, followHandler *handlers.FollowHandler) http.Handler {
+func NewRouter(userHandler *handlers.UserHandler, followHandler *handlers.FollowHandler, mediaHandler *handlers.MediaHandler) http.Handler {
 	router := chi.NewRouter()
 
 	// --- User Routes ---
@@ -23,6 +23,8 @@ func NewRouter(userHandler *handlers.UserHandler, followHandler *handlers.Follow
 	router.Post("/follows", followHandler.CreateFollow)
 	// DELETE /follows - delete following
 	router.Delete("/follows", followHandler.DeleteFollow)
+
+	router.Get("/media", mediaHandler.GetMedia) 
 
 	// router.Post("/recommendations", recommendoHandler.CreateRecommendation)
 
