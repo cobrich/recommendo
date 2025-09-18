@@ -16,7 +16,7 @@ func NewFollowRepo(db *sql.DB) *FollowRepo {
 
 func (r *FollowRepo) CreateFollow(ctx context.Context, fromID, toID int) error {
 	query := `
-        INSERT INTO follows (user_id_1, user_id_2)
+        INSERT INTO follows (follower_id, following_id)
         VALUES ($1, $2)
 		`
 

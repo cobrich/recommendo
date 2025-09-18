@@ -7,7 +7,7 @@ import (
 	"github.com/cobrich/recommendo/service"
 )
 
-type SendFriendRequestDTO struct {
+type CreateFollowRequestDTO struct {
 	FromUserID int `json:"from_user_id"`
 	ToUserID   int `json:"to_user_id"`
 }
@@ -25,7 +25,7 @@ func NewFriendshiphandler(s *service.FollowService) *FollowHandler {
 }
 
 func (h *FollowHandler) CreateFollow(w http.ResponseWriter, r *http.Request) {
-	var requestBody SendFriendRequestDTO
+	var requestBody CreateFollowRequestDTO
 
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&requestBody)
@@ -46,7 +46,7 @@ func (h *FollowHandler) CreateFollow(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusCreated) // 201 status
-	w.Write([]byte(`{"status": "friendship request sent"}`))
+	w.Write([]byte(`{"status": "following was Successfully"}`))
 }
 
 func (h *FollowHandler) DeleteFollow(w http.ResponseWriter, r *http.Request) {}
