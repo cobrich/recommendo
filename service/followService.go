@@ -21,3 +21,11 @@ func (s *FollowService) CreateFollow(ctx context.Context, fromId, toID int) erro
 	}
 	return nil
 }
+
+func (s *FollowService) DeleteFollow(ctx context.Context, fromId, toID int) error {
+	err := s.r.DeleteFollow(ctx, fromId, toID)
+	if err != nil {
+		return err
+	}
+	return nil
+}

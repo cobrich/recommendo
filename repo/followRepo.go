@@ -14,16 +14,16 @@ func NewFollowRepo(db *sql.DB) *FollowRepo {
 	return &FollowRepo{DB: db}
 }
 
-func (r *FollowRepo) CreateFollow(ctx context.Context, fromID, toID int) error {
+func (r *FollowRepo) CreateFollow(ctx context.Context, followerID, followingID int) error {
 	query := `
         INSERT INTO follows (follower_id, following_id)
         VALUES ($1, $2)
 		`
 
-	result, err := r.DB.ExecContext(ctx, query, fromID, toID)
+	result, err := r.DB.ExecContext(ctx, query, followerID, followingID)
 	if err != nil {
 		// Если произошла ошибка (например, нарушение UNIQUE constraint), мы ее получим.
-		return fmt.Errorf("failed to create friendship request: %w", err)
+		return fmt.Errorf("failed to create following: %w", err)
 	}
 
 	// 3. (Опционально, но хорошая практика) Проверяем, что была затронута ровно одна строка.
@@ -33,7 +33,32 @@ func (r *FollowRepo) CreateFollow(ctx context.Context, fromID, toID int) error {
 		return fmt.Errorf("failed to check rows affected: %w", err)
 	}
 	if rowsAffected == 0 {
-		return fmt.Errorf("no rows were affected, friendship request not created")
+		return fmt.Errorf("no rows were affected, following not created")
+	}
+
+	return nil
+}
+
+func (r *FollowRepo) DeleteFollow(ctx context.Context, followerID, followingID int) error {
+	query := `
+		DELETE FROM follows 
+		WHERE follower_id = $1 AND following_id= $2
+		`
+
+	result, err := r.DB.ExecContext(ctx, query, followerID, followingID)
+	if err != nil {
+		// Если произошла ошибка (например, нарушение UNIQUE constraint), мы ее получим.
+		return fmt.Errorf("failed to delete follow: %w", err)
+	}
+
+	// 3. (Опционально, но хорошая практика) Проверяем, что была затронута ровно одна строка.
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		// Маловероятная ошибка, но проверка не помешает.
+		return fmt.Errorf("failed to check rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("follow relationship not found")
 	}
 
 	return nil
