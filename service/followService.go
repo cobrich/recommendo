@@ -14,8 +14,8 @@ func NewFriendshipService(r *repo.FollowRepo) *FollowService {
 	return &FollowService{r: r}
 }
 
-func (s *FollowService) SendFriendRequest(ctx context.Context, fromId, toID int) error {
-	err := s.r.SendFriendRequest(ctx, fromId, toID)
+func (s *FollowService) CreateFollow(ctx context.Context, fromId, toID int) error {
+	err := s.r.CreateFollow(ctx, fromId, toID)
 	if err != nil {
 		return err
 	}

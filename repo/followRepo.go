@@ -4,8 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-
-	"github.com/cobrich/recommendo/models"
 )
 
 type FollowRepo struct {
@@ -16,13 +14,13 @@ func NewFollowRepo(db *sql.DB) *FollowRepo {
 	return &FollowRepo{DB: db}
 }
 
-func (r *FollowRepo) SendFriendRequest(ctx context.Context, fromID, toID int) error {
+func (r *FollowRepo) CreateFollow(ctx context.Context, fromID, toID int) error {
 	query := `
-        INSERT INTO friendships (user_id_1, user_id_2, status) 
-        VALUES ($1, $2, $3) 
+        INSERT INTO follows (user_id_1, user_id_2)
+        VALUES ($1, $2)
 		`
 
-	result, err := r.DB.ExecContext(ctx, query, fromID, toID, models.StatusPending)
+	result, err := r.DB.ExecContext(ctx, query, fromID, toID)
 	if err != nil {
 		// Если произошла ошибка (например, нарушение UNIQUE constraint), мы ее получим.
 		return fmt.Errorf("failed to create friendship request: %w", err)

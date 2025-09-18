@@ -24,7 +24,7 @@ func NewFriendshiphandler(s *service.FollowService) *FollowHandler {
 	return &FollowHandler{s: s}
 }
 
-func (h *FollowHandler) SendFriendhsip(w http.ResponseWriter, r *http.Request) {
+func (h *FollowHandler) CreateFollow(w http.ResponseWriter, r *http.Request) {
 	var requestBody SendFriendRequestDTO
 
 	decoder := json.NewDecoder(r.Body)
@@ -39,7 +39,7 @@ func (h *FollowHandler) SendFriendhsip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.s.SendFriendRequest(r.Context(), requestBody.FromUserID, requestBody.ToUserID)
+	err = h.s.CreateFollow(r.Context(), requestBody.FromUserID, requestBody.ToUserID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -48,7 +48,5 @@ func (h *FollowHandler) SendFriendhsip(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated) // 201 status
 	w.Write([]byte(`{"status": "friendship request sent"}`))
 }
-
-func (h *FollowHandler) CreateFollow(w http.ResponseWriter, r *http.Request) {}
 
 func (h *FollowHandler) DeleteFollow(w http.ResponseWriter, r *http.Request) {}
