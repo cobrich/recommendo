@@ -61,3 +61,104 @@ func (r *RecommendationRepo) CreateRecommendation(ctx context.Context, fromId, t
 
 	return nil
 }
+
+// GetSentRecommendations возвращает список рекомендаций, ОТПРАВЛЕННЫХ пользователем.
+func (r *RecommendationRepo) GetSentRecommendations(ctx context.Context, userID int) ([]models.RecommendationDetails, error) {
+	// SQL-запрос, который объединяет 3 таблицы: recommendations, media_items и users (для получателя).
+	query := `
+		SELECT
+			r.recommendation_id,
+			r.created_at,
+			
+			-- Поля для media_items
+			m.media_id, m.item_type, m.name, m.year, m.author, m.created_at,
+			
+			-- Поля для users (получателя рекомендации)
+			u.user_id, u.user_name, u.created_at
+		FROM
+			recommendations r
+		JOIN
+			media_items m ON r.media_id = m.media_id
+		JOIN
+			-- Присоединяем информацию о том, КОМУ порекомендовали
+			users u ON r.to_user_id = u.user_id
+		WHERE
+			r.from_user_id = $1
+		ORDER BY
+			r.created_at DESC;
+	`
+
+	rows, err := r.DB.QueryContext(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get sent recommendations: %w", err)
+	}
+	defer rows.Close()
+
+	var recommendations []models.RecommendationDetails
+	for rows.Next() {
+		var rec models.RecommendationDetails
+		// Сканируем результат в поля нашей "богатой" структуры.
+		// Обратите внимание на вложенные поля rec.Media и rec.User.
+		if err := rows.Scan(
+			&rec.RecommendationID,
+			&rec.CreatedAt,
+			&rec.Media.ID, &rec.Media.Type, &rec.Media.Name, &rec.Media.Year, &rec.Media.Author, &rec.Media.CreatedAt,
+			&rec.User.ID, &rec.User.UserName, &rec.User.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan sent recommendation row: %w", err)
+		}
+		recommendations = append(recommendations, rec)
+	}
+
+	return recommendations, nil
+}
+
+
+// GetReceivedRecommendations возвращает список рекомендаций, ПОЛУЧЕННЫХ пользователем.
+func (r *RecommendationRepo) GetReceivedRecommendations(ctx context.Context, userID int) ([]models.RecommendationDetails, error) {
+	// Запрос очень похож, но меняются условия в JOIN и WHERE.
+	query := `
+		SELECT
+			r.recommendation_id,
+			r.created_at,
+			
+			m.media_id, m.item_type, m.name, m.year, m.author, m.created_at,
+			
+			-- Присоединяем информацию о том, КТО порекомендовал
+			u.user_id, u.user_name, u.created_at
+		FROM
+			recommendations r
+		JOIN
+			media_items m ON r.media_id = m.media_id
+		JOIN
+			-- Присоединяем информацию об ОТПРАВИТЕЛЕ рекомендации
+			users u ON r.from_user_id = u.user_id
+		WHERE
+			r.to_user_id = $1 -- <-- Главное отличие здесь
+		ORDER BY
+			r.created_at DESC;
+	`
+    
+    // Код для выполнения запроса и сканирования будет точно таким же, как в GetSentRecommendations
+	rows, err := r.DB.QueryContext(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get received recommendations: %w", err)
+	}
+	defer rows.Close()
+
+	var recommendations []models.RecommendationDetails
+	for rows.Next() {
+		var rec models.RecommendationDetails
+		if err := rows.Scan(
+			&rec.RecommendationID,
+			&rec.CreatedAt,
+			&rec.Media.ID, &rec.Media.Type, &rec.Media.Name, &rec.Media.Year, &rec.Media.Author, &rec.Media.CreatedAt,
+			&rec.User.ID, &rec.User.UserName, &rec.User.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan received recommendation row: %w", err)
+		}
+		recommendations = append(recommendations, rec)
+	}
+
+	return recommendations, nil
+}

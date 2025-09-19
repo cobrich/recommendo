@@ -20,6 +20,9 @@ func NewRouter(userHandler *handlers.UserHandler, followHandler *handlers.Follow
 	router.Get("/users/{userID}/followers", userHandler.GetUserFollowers)
 	router.Get("/users/{userID}/followings", userHandler.GetUserFollowings)
 
+	// --- Recommendation Routes ---
+	router.Get("/users/{userID}/recommandations", recommendationHandler.GetUserRecommendations)
+
 	// POST /follows - create following
 	router.Post("/follows", followHandler.CreateFollow)
 	// DELETE /follows - delete following

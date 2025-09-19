@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/cobrich/recommendo/models"
 	"github.com/cobrich/recommendo/repo"
 )
 
@@ -65,4 +66,12 @@ func (s *RecommendationService) CreateRecommendation(ctx context.Context, fromID
 
 	// 5. If not exists, and there is no problems create recomm
 	return s.r.CreateRecommendation(ctx, fromID, toID, mediaID)
+}
+
+func (s *RecommendationService) GetRecommendations (ctx context.Context, userID int, direction string) ([]models.RecommendationDetails, error) {
+    if direction == "sent" {
+        return s.r.GetSentRecommendations(ctx, userID)
+    }
+    
+    return s.r.GetReceivedRecommendations(ctx, userID)
 }
