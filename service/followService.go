@@ -10,7 +10,7 @@ type FollowService struct {
 	r *repo.FollowRepo
 }
 
-func NewFriendshipService(r *repo.FollowRepo) *FollowService {
+func NewFollowService(r *repo.FollowRepo) *FollowService {
 	return &FollowService{r: r}
 }
 
@@ -28,4 +28,12 @@ func (s *FollowService) DeleteFollow(ctx context.Context, fromId, toID int) erro
 		return err
 	}
 	return nil
+}
+
+func (s *FollowService) AreUsersFriends (ctx context.Context, userID1, userID2 int) (bool, error) {
+	areFriends, err := s.r.AreUsersFriends(ctx, userID1, userID2)
+	if err != nil {
+		return false, err
+	}
+	return areFriends, nil
 }

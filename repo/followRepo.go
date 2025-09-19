@@ -63,3 +63,22 @@ func (r *FollowRepo) DeleteFollow(ctx context.Context, followerID, followingID i
 
 	return nil
 }
+
+func (r *FollowRepo) AreUsersFriends(ctx context.Context, userID1, userID2 int) (bool, error) {
+	query := `
+		SELECT EXISTS (
+			SELECT 1
+			FROM follows f1
+			JOIN follows f2 ON f1.follower_id = f2.following_id AND f1.following_id = f2.follower_id
+			WHERE f1.follower_id = $1 AND f1.following_id = $2
+		)
+	`
+	var areFriends bool
+
+	err := r.DB.QueryRowContext(ctx, query, userID1, userID2).Scan(&areFriends)
+	if err != nil {
+		return false, fmt.Errorf("failed to check friendship: %w", err)
+	}
+
+	return areFriends, nil
+}
