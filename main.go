@@ -37,19 +37,19 @@ func main() {
 
 	// Repos
 	userRepo := repo.NewUserRepo(db)
-	friendhipRepo := repo.NewFollowRepo(db)
+	followRepo := repo.NewFollowRepo(db)
 	mediaRepo := repo.NewMediaRepo(db)
 	recommendationRepo := repo.NewRecommendationRepo(db)
 
 	// Services
 	userService := service.NewUserService(userRepo)
-	friendshipService := service.NewFriendshipService(friendhipRepo)
+	followService := service.NewFollowService(followRepo)
 	mediaService := service.NewMediaService(mediaRepo)
-	recommendationService := service.NewRecommmendationService(recommendationRepo)
+	recommendationService := service.NewRecommendationService(recommendationRepo, mediaRepo, userService, followService)
 
 	// Handlers
 	userHandler := handlers.NewUserHandler(userService)
-	friendshipHandler := handlers.NewFriendshiphandler(friendshipService)
+	friendshipHandler := handlers.NewFriendshiphandler(followService)
 	mediaHandler := handlers.NewMediaHandler(mediaService)
 	recommendationHandler := handlers.NewRecommendationHandler(recommendationService)
 
