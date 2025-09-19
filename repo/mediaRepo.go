@@ -66,3 +66,23 @@ func (r *MediaRepo) FindMedia(ctx context.Context, mtype, name string) ([]models
 
 	return media_items, nil
 }
+
+func (r *MediaRepo) GetMedia(ctx context.Context, mediaID int) (models.MediaItem, error) {
+	query := "SELECT media_id, item_type, name, year, author, created_at FROM media_items WHERE media_id=$1"
+
+	var media_item models.MediaItem
+	if err := r.DB.QueryRowContext(ctx, query, mediaID).Scan(
+		&media_item.ID,
+		&media_item.Type,
+		&media_item.Name,
+		&media_item.Year,
+		&media_item.Author,
+		&media_item.CreatedAt); err != nil {
+		if err == sql.ErrNoRows {
+			return models.MediaItem{}, fmt.Errorf("media with id %d not found", mediaID)
+		}
+		return models.MediaItem{}, fmt.Errorf("error while scanning row: %w", err)
+
+	}
+	return media_item, nil
+}
