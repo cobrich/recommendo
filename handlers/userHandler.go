@@ -4,12 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/cobrich/recommendo/dtos"
+	"github.com/cobrich/recommendo/middleware"
 	"github.com/cobrich/recommendo/service"
-	"github.com/go-chi/chi/v5"
 )
 
 type UserHandler struct {
@@ -64,18 +63,18 @@ func (h *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 	// 2. Creating token
 	token, err := h.s.Login(r.Context(), loginDTO)
 	if err != nil {
-        if errors.Is(err, service.ErrInvalidCredentials) {
-            http.Error(w, "Invalid email or password", http.StatusUnauthorized)
-        } else {
-            // Все остальные ошибки - это 500
-            http.Error(w, "Internal server error", http.StatusInternalServerError)
-        }
-        return
+		if errors.Is(err, service.ErrInvalidCredentials) {
+			http.Error(w, "Invalid email or password", http.StatusUnauthorized)
+		} else {
+			// Все остальные ошибки - это 500
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+		}
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	
+
 	// 3. Send token
 	if err := json.NewEncoder(w).Encode(dtos.TokenResponseDTO{Token: token}); err != nil {
 		http.Error(w, "Failed to encode token to JSON", http.StatusInternalServerError)
@@ -103,14 +102,22 @@ func (h *UserHandler) GetUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "userID")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+	// idStr := chi.URLParam(r, "userID")
+	// id, err := strconv.Atoi(idStr)
+	// if err != nil {
+	// 	http.Error(w, "Invalid user ID", http.StatusBadRequest)
+	// 	return
+	// }
+
+	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		// Эта ошибка не должна происходить, если middleware работает правильно,
+		// но проверка - хорошая практика.
+		http.Error(w, "Could not retrieve user ID from context", http.StatusInternalServerError)
 		return
 	}
 
-	user, err := h.s.GetUserByID(r.Context(), id)
+	user, err := h.s.GetUserByID(r.Context(), currentUserID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -124,14 +131,22 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) GetUserFriends(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "userID")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+	// idStr := chi.URLParam(r, "userID")
+	// id, err := strconv.Atoi(idStr)
+	// if err != nil {
+	// 	http.Error(w, "Invalid user ID", http.StatusBadRequest)
+	// 	return
+	// }
+
+	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		// Эта ошибка не должна происходить, если middleware работает правильно,
+		// но проверка - хорошая практика.
+		http.Error(w, "Could not retrieve user ID from context", http.StatusInternalServerError)
 		return
 	}
 
-	users, err := h.s.GetUserFriends(r.Context(), id)
+	users, err := h.s.GetUserFriends(r.Context(), currentUserID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			http.Error(w, err.Error(), http.StatusNotFound)
@@ -155,14 +170,22 @@ func (h *UserHandler) GetUserFriends(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) GetUserFollowers(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "userID")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+	// idStr := chi.URLParam(r, "userID")
+	// id, err := strconv.Atoi(idStr)
+	// if err != nil {
+	// 	http.Error(w, "Invalid user ID", http.StatusBadRequest)
+	// 	return
+	// }
+
+	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		// Эта ошибка не должна происходить, если middleware работает правильно,
+		// но проверка - хорошая практика.
+		http.Error(w, "Could not retrieve user ID from context", http.StatusInternalServerError)
 		return
 	}
 
-	users, err := h.s.GetUserFollowers(r.Context(), id)
+	users, err := h.s.GetUserFollowers(r.Context(), currentUserID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			http.Error(w, err.Error(), http.StatusNotFound)
@@ -186,14 +209,22 @@ func (h *UserHandler) GetUserFollowers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) GetUserFollowings(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "userID")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+	// idStr := chi.URLParam(r, "userID")
+	// id, err := strconv.Atoi(idStr)
+	// if err != nil {
+	// 	http.Error(w, "Invalid user ID", http.StatusBadRequest)
+	// 	return
+	// }
+
+	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		// Эта ошибка не должна происходить, если middleware работает правильно,
+		// но проверка - хорошая практика.
+		http.Error(w, "Could not retrieve user ID from context", http.StatusInternalServerError)
 		return
 	}
 
-	users, err := h.s.GetUserFollowings(r.Context(), id)
+	users, err := h.s.GetUserFollowings(r.Context(), currentUserID)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			http.Error(w, err.Error(), http.StatusNotFound)
