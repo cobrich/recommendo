@@ -16,6 +16,28 @@ func NewUserRepo(db *sql.DB) *UserRepo {
 	return &UserRepo{DB: db}
 }
 
+func (r *UserRepo) CreateUser(ctx context.Context, user models.User) (models.User, error) {
+	var createdUser models.User
+
+	query := `
+		INSERT INTO users (user_name, email, password_hash) 
+		VALUES ($1, $2, $3) 
+		RETURNING user_id, user_name, email, created_at`
+
+	err := r.DB.QueryRowContext(ctx, query, user.UserName, user.Email, user.PasswordHash).Scan(
+		&createdUser.ID,
+		&createdUser.UserName,
+		&createdUser.Email,
+		&createdUser.CreatedAt,
+	)
+
+	if err != nil {
+		return models.User{}, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	return createdUser, nil
+}
+
 func (r *UserRepo) GetUsers(ctx context.Context) ([]models.User, error) {
 	query := "SELECT user_id, user_name, created_at FROM users ORDER BY user_name"
 
@@ -161,4 +183,15 @@ func (r *UserRepo) GetUserFollowings(ctx context.Context, id int) ([]models.User
 		users = append(users, user)
 	}
 	return users, nil
+}
+
+// FindUserByEmail ищет пользователя по email. Возвращает хеш пароля для проверки в сервисе.
+func (r *UserRepo) FindUserByEmail(ctx context.Context, email string) (models.User, error) {
+	var user models.User
+	query := "SELECT user_id, user_name, email, password_hash, created_at FROM users WHERE email = $1"
+	err := r.DB.QueryRowContext(ctx, query, email).Scan(&user.ID, &user.UserName, &user.Email, &user.PasswordHash, &user.CreatedAt)
+	if err != nil {
+		return models.User{}, err // err может быть sql.ErrNoRows, это нормально
+	}
+	return user, nil
 }

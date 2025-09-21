@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
 
+	"github.com/cobrich/recommendo/dtos"
 	"github.com/cobrich/recommendo/service"
 	"github.com/go-chi/chi/v5"
 )
@@ -16,6 +18,68 @@ type UserHandler struct {
 
 func NewUserHandler(userService *service.UserService) *UserHandler {
 	return &UserHandler{s: userService}
+}
+
+func (h *UserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
+	var registerDTO dtos.RegisterUserDTO
+	if err := json.NewDecoder(r.Body).Decode(&registerDTO); err != nil {
+		// Если JSON невалидный - это ошибка клиента
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	createdUser, err := h.s.Register(r.Context(), registerDTO)
+	if err != nil {
+		// Проверяем тип ошибки из сервиса
+		if errors.Is(err, service.ErrUserExists) {
+			http.Error(w, err.Error(), http.StatusConflict) // 409 Conflict
+		} else {
+			// Логируем полную ошибку для себя, а пользователю даем общее сообщение
+			// log.Printf("Internal error on user registration: %v", err)
+			http.Error(w, "Could not process request", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	responseDTO := dtos.UserResponseDTO{
+		ID:        createdUser.ID,
+		UserName:  createdUser.UserName,
+		Email:     createdUser.Email,
+		CreatedAt: createdUser.CreatedAt,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated) // 201 Created для успешного создания ресурса
+	json.NewEncoder(w).Encode(responseDTO)
+}
+
+func (h *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
+	// 1. Getting User Information from Request Body
+	var loginDTO dtos.LoginUserDTO
+	if err := json.NewDecoder(r.Body).Decode(&loginDTO); err != nil {
+		// Если JSON невалидный - это ошибка клиента
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	// 2. Creating token
+	token, err := h.s.Login(r.Context(), loginDTO)
+	if err != nil {
+        if errors.Is(err, service.ErrInvalidCredentials) {
+            http.Error(w, "Invalid email or password", http.StatusUnauthorized)
+        } else {
+            // Все остальные ошибки - это 500
+            http.Error(w, "Internal server error", http.StatusInternalServerError)
+        }
+        return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	
+	// 3. Send token
+	if err := json.NewEncoder(w).Encode(dtos.TokenResponseDTO{Token: token}); err != nil {
+		http.Error(w, "Failed to encode token to JSON", http.StatusInternalServerError)
+	}
 }
 
 func (h *UserHandler) GetUsers(w http.ResponseWriter, r *http.Request) {
