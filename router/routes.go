@@ -28,7 +28,7 @@ func NewRouter(userHandler *handlers.UserHandler, followHandler *handlers.Follow
 
 		// --- User Routes ---
 		r.Get("/users", userHandler.GetUsers)
-		r.Get("/me", userHandler.GetUserByID)
+		r.Get("/me", userHandler.GetCurrentUser)
 
 		// --- Follow/Friendship Routes ---
 		r.Get("/me/friends", userHandler.GetUserFriends)

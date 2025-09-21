@@ -100,7 +100,7 @@ func (h *UserHandler) GetUsers(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 
 	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
