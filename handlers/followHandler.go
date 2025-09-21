@@ -48,8 +48,8 @@ func (h *FollowHandler) CreateFollow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated) // 201 status
-	w.Write([]byte(`{"status": "following was Successfully"}`))
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(dtos.StatusResponseDTO{Status: "following was successful"})
 }
 
 func (h *FollowHandler) DeleteFollow(w http.ResponseWriter, r *http.Request) {
