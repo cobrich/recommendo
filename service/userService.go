@@ -111,10 +111,6 @@ func (s *UserService) GetUserByID(ctx context.Context, id int) (models.User, err
 }
 
 func (s *UserService) GetUserFriends(ctx context.Context, id int) ([]models.User, error) {
-	_, err := s.GetUserByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
 	users, err := s.r.GetUserFriends(ctx, id)
 	if err != nil {
 		return nil, err
@@ -123,10 +119,6 @@ func (s *UserService) GetUserFriends(ctx context.Context, id int) ([]models.User
 }
 
 func (s *UserService) GetUserFollowers(ctx context.Context, id int) ([]models.User, error) {
-	_, err := s.GetUserByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
 	users, err := s.r.GetUserFollowers(ctx, id)
 	if err != nil {
 		return nil, err
@@ -135,10 +127,6 @@ func (s *UserService) GetUserFollowers(ctx context.Context, id int) ([]models.Us
 }
 
 func (s *UserService) GetUserFollowings(ctx context.Context, id int) ([]models.User, error) {
-	_, err := s.GetUserByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
 	users, err := s.r.GetUserFollowings(ctx, id)
 	if err != nil {
 		return nil, err
