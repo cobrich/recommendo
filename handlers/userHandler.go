@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strings"
 
 	"github.com/cobrich/recommendo/dtos"
 	"github.com/cobrich/recommendo/middleware"
@@ -102,12 +101,6 @@ func (h *UserHandler) GetUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
-	// idStr := chi.URLParam(r, "userID")
-	// id, err := strconv.Atoi(idStr)
-	// if err != nil {
-	// 	http.Error(w, "Invalid user ID", http.StatusBadRequest)
-	// 	return
-	// }
 
 	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
@@ -131,12 +124,6 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) GetUserFriends(w http.ResponseWriter, r *http.Request) {
-	// idStr := chi.URLParam(r, "userID")
-	// id, err := strconv.Atoi(idStr)
-	// if err != nil {
-	// 	http.Error(w, "Invalid user ID", http.StatusBadRequest)
-	// 	return
-	// }
 
 	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
@@ -148,10 +135,10 @@ func (h *UserHandler) GetUserFriends(w http.ResponseWriter, r *http.Request) {
 
 	users, err := h.s.GetUserFriends(r.Context(), currentUserID)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
+		if errors.Is(err, service.ErrUserNotFound) {
 			http.Error(w, err.Error(), http.StatusNotFound)
 		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "Could not process request", http.StatusInternalServerError)
 		}
 		return
 	}
@@ -170,12 +157,6 @@ func (h *UserHandler) GetUserFriends(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) GetUserFollowers(w http.ResponseWriter, r *http.Request) {
-	// idStr := chi.URLParam(r, "userID")
-	// id, err := strconv.Atoi(idStr)
-	// if err != nil {
-	// 	http.Error(w, "Invalid user ID", http.StatusBadRequest)
-	// 	return
-	// }
 
 	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
@@ -187,10 +168,10 @@ func (h *UserHandler) GetUserFollowers(w http.ResponseWriter, r *http.Request) {
 
 	users, err := h.s.GetUserFollowers(r.Context(), currentUserID)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
+		if errors.Is(err, service.ErrUserNotFound) {
 			http.Error(w, err.Error(), http.StatusNotFound)
 		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "Could not process request", http.StatusInternalServerError)
 		}
 		return
 	}
@@ -209,12 +190,6 @@ func (h *UserHandler) GetUserFollowers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) GetUserFollowings(w http.ResponseWriter, r *http.Request) {
-	// idStr := chi.URLParam(r, "userID")
-	// id, err := strconv.Atoi(idStr)
-	// if err != nil {
-	// 	http.Error(w, "Invalid user ID", http.StatusBadRequest)
-	// 	return
-	// }
 
 	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
@@ -226,10 +201,10 @@ func (h *UserHandler) GetUserFollowings(w http.ResponseWriter, r *http.Request) 
 
 	users, err := h.s.GetUserFollowings(r.Context(), currentUserID)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
+		if errors.Is(err, service.ErrUserNotFound) {
 			http.Error(w, err.Error(), http.StatusNotFound)
 		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "Could not process request", http.StatusInternalServerError)
 		}
 		return
 	}

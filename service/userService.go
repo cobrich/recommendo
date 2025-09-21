@@ -17,6 +17,7 @@ import (
 var (
 	ErrUserExists         = errors.New("user with this email already exists")
 	ErrInvalidCredentials = errors.New("invalid credentials") // Для логина
+	ErrUserNotFound       = errors.New("user not found")
 )
 
 type UserService struct {
