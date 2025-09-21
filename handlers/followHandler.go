@@ -4,13 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/cobrich/recommendo/dtos"
+	"github.com/cobrich/recommendo/middleware"
 	"github.com/cobrich/recommendo/service"
 )
-
-type CreateFollowRequestDTO struct {
-	FromUserID int `json:"follower_id"`
-	ToUserID   int `json:"following_id"`
-}
 
 type UserIDRequestDTO struct {
 	UserID int `json:"user_id"`
@@ -25,7 +22,7 @@ func NewFriendshiphandler(s *service.FollowService) *FollowHandler {
 }
 
 func (h *FollowHandler) CreateFollow(w http.ResponseWriter, r *http.Request) {
-	var requestBody CreateFollowRequestDTO
+	var requestBody dtos.CreateFollowRequestDTO
 
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&requestBody)
@@ -34,12 +31,18 @@ func (h *FollowHandler) CreateFollow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if requestBody.FromUserID <= 0 || requestBody.ToUserID <= 0 {
+	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Could not retrieve user ID from context", http.StatusInternalServerError)
+		return
+	}
+
+	if currentUserID <= 0 || requestBody.ToUserID <= 0 {
 		http.Error(w, "User IDs must be positive integers", http.StatusBadRequest)
 		return
 	}
 
-	err = h.s.CreateFollow(r.Context(), requestBody.FromUserID, requestBody.ToUserID)
+	err = h.s.CreateFollow(r.Context(), currentUserID, requestBody.ToUserID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -50,7 +53,7 @@ func (h *FollowHandler) CreateFollow(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *FollowHandler) DeleteFollow(w http.ResponseWriter, r *http.Request) {
-	var requestBody CreateFollowRequestDTO
+	var requestBody dtos.CreateFollowRequestDTO
 
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&requestBody)
@@ -59,12 +62,18 @@ func (h *FollowHandler) DeleteFollow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if requestBody.FromUserID <= 0 || requestBody.ToUserID <= 0 {
+	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Could not retrieve user ID from context", http.StatusInternalServerError)
+		return
+	}
+
+	if currentUserID <= 0 || requestBody.ToUserID <= 0 {
 		http.Error(w, "User IDs must be positive integers", http.StatusBadRequest)
 		return
 	}
 
-	err = h.s.DeleteFollow(r.Context(), requestBody.FromUserID, requestBody.ToUserID)
+	err = h.s.DeleteFollow(r.Context(), currentUserID, requestBody.ToUserID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
