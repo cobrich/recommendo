@@ -13,7 +13,10 @@ func NewRouter(userHandler *handlers.UserHandler, followHandler *handlers.Follow
 	mediaHandler *handlers.MediaHandler, recommendationHandler *handlers.RecommendationHandler, logger *slog.Logger) http.Handler {
 	router := chi.NewRouter()
 
+	router.Use(middleware.NewRecoverer(logger))
+
 	router.Use(middleware.NewLogger(logger))
+	
 	// Auth Routes
 	router.Post("/register", userHandler.RegisterUser)
 	router.Post("/login", userHandler.LoginUser)
