@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/cobrich/recommendo/dtos"
@@ -11,11 +12,12 @@ import (
 )
 
 type UserHandler struct {
-	s *service.UserService
+	s      *service.UserService
+	logger *slog.Logger
 }
 
-func NewUserHandler(userService *service.UserService) *UserHandler {
-	return &UserHandler{s: userService}
+func NewUserHandler(userService *service.UserService, logger *slog.Logger) *UserHandler {
+	return &UserHandler{s: userService, logger: logger}
 }
 
 func (h *UserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {

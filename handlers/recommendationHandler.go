@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/cobrich/recommendo/dtos"
@@ -11,11 +12,12 @@ import (
 )
 
 type RecommendationHandler struct {
-	s *service.RecommendationService
+	s      *service.RecommendationService
+	logger *slog.Logger
 }
 
-func NewRecommendationHandler(s *service.RecommendationService) *RecommendationHandler {
-	return &RecommendationHandler{s: s}
+func NewRecommendationHandler(s *service.RecommendationService, logger *slog.Logger) *RecommendationHandler {
+	return &RecommendationHandler{s: s, logger: logger}
 }
 
 func (h *RecommendationHandler) CreateRecommendation(w http.ResponseWriter, r *http.Request) {

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/cobrich/recommendo/dtos"
 	"github.com/cobrich/recommendo/jwt"
@@ -21,11 +22,12 @@ var (
 )
 
 type UserService struct {
-	r *repo.UserRepo
+	r      *repo.UserRepo
+	logger *slog.Logger
 }
 
-func NewUserService(userRepo *repo.UserRepo) *UserService {
-	return &UserService{r: userRepo}
+func NewUserService(userRepo *repo.UserRepo, logger *slog.Logger) *UserService {
+	return &UserService{r: userRepo, logger: logger}
 }
 
 func (s *UserService) Register(ctx context.Context, registerDTO dtos.RegisterUserDTO) (models.User, error) {

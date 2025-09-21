@@ -4,7 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/cobrich/recommendo/config"
 	"github.com/cobrich/recommendo/handlers"
@@ -16,6 +18,9 @@ import (
 )
 
 func main() {
+	// Create logger
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
 	// Get config
 	cfg := config.GetConfig()
 
@@ -42,21 +47,21 @@ func main() {
 	recommendationRepo := repo.NewRecommendationRepo(db)
 
 	// Services
-	userService := service.NewUserService(userRepo)
-	followService := service.NewFollowService(followRepo)
-	mediaService := service.NewMediaService(mediaRepo)
-	recommendationService := service.NewRecommendationService(recommendationRepo, mediaRepo, userService, followService)
+	userService := service.NewUserService(userRepo, logger)
+	followService := service.NewFollowService(followRepo, logger)
+	mediaService := service.NewMediaService(mediaRepo, logger)
+	recommendationService := service.NewRecommendationService(recommendationRepo, mediaRepo, userService, followService, logger)
 
 	// Handlers
-	userHandler := handlers.NewUserHandler(userService)
-	friendshipHandler := handlers.NewFriendshiphandler(followService)
-	mediaHandler := handlers.NewMediaHandler(mediaService)
-	recommendationHandler := handlers.NewRecommendationHandler(recommendationService)
+	userHandler := handlers.NewUserHandler(userService, logger)
+	friendshipHandler := handlers.NewFriendshiphandler(followService, logger)
+	mediaHandler := handlers.NewMediaHandler(mediaService, logger)
+	recommendationHandler := handlers.NewRecommendationHandler(recommendationService, logger)
 
 	fmt.Println("Сервер запущен на http://localhost:8080")
 
 	// Create router and set
-	router := router.NewRouter(userHandler, friendshipHandler, mediaHandler, recommendationHandler)
+	router := router.NewRouter(userHandler, friendshipHandler, mediaHandler, recommendationHandler, logger)
 
 	// Run server in port 8080
 	log.Fatal(http.ListenAndServe(":8080", router))

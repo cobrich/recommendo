@@ -2,17 +2,19 @@ package handlers
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 
 	"github.com/cobrich/recommendo/service"
 )
 
 type MediaHandler struct {
-	s *service.MediaService
+	s      *service.MediaService
+	logger *slog.Logger
 }
 
-func NewMediaHandler(s *service.MediaService) *MediaHandler {
-	return &MediaHandler{s: s}
+func NewMediaHandler(s *service.MediaService, logger *slog.Logger) *MediaHandler {
+	return &MediaHandler{s: s, logger: logger}
 }
 
 func (h *MediaHandler) GetMedia(w http.ResponseWriter, r *http.Request) {

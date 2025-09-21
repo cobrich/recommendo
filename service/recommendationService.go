@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/cobrich/recommendo/models"
 	"github.com/cobrich/recommendo/repo"
@@ -25,15 +26,17 @@ type RecommendationService struct {
 	// Зависимости от ДРУГИХ СЕРВИСОВ
 	userService   *UserService
 	followService *FollowService
+	logger        *slog.Logger
 }
 
 // Конструктор теперь принимает все нужные зависимости
-func NewRecommendationService(rRepo *repo.RecommendationRepo, mRepo *repo.MediaRepo, uService *UserService, fService *FollowService) *RecommendationService {
+func NewRecommendationService(rRepo *repo.RecommendationRepo, mRepo *repo.MediaRepo, uService *UserService, fService *FollowService, logger *slog.Logger) *RecommendationService {
 	return &RecommendationService{
 		r:             rRepo,
 		mediaRepo:     mRepo,
 		userService:   uService,
 		followService: fService,
+		logger: logger,
 	}
 }
 

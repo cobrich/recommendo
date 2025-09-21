@@ -92,25 +92,3 @@ func ValidatePassword(password string) (bool, PasswordErrors) {
 
 	return isValid, errs
 }
-
-// func main() {
-// 	passwordsToTest := []string{
-// 		"short",         // Невалидный (короткий)
-// 		"nouppercase1!", // Невалидный (нет заглавных)
-// 		"NOLOWERCASE1!", // Невалидный (нет строчных)
-// 		"NoNumber!",     // Невалидный (нет цифр)
-// 		"NoSpecial1",    // Невалидный (нет спец. символа)
-// 		"ValidPass123!", // Валидный
-// 	}
-
-// 	for _, pass := range passwordsToTest {
-// 		isValid, errs := ValidatePassword(pass)
-// 		if !isValid {
-// 			fmt.Printf("Пароль '%s' невалиден. Ошибки: %+v\n", pass, errs)
-// 			// Пример вывода одной ошибки для пользователя:
-// 			fmt.Printf("  -> Сообщение пользователю: %s\n", errs.Error())
-// 		} else {
-// 			fmt.Printf("Пароль '%s' валиден!\n", pass)
-// 		}
-// 	}
-// }

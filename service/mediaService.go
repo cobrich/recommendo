@@ -2,17 +2,19 @@ package service
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/cobrich/recommendo/models"
 	"github.com/cobrich/recommendo/repo"
 )
 
 type MediaService struct {
-	r *repo.MediaRepo
+	r      *repo.MediaRepo
+	logger *slog.Logger
 }
 
-func NewMediaService(r *repo.MediaRepo) *MediaService {
-	return &MediaService{r: r}
+func NewMediaService(r *repo.MediaRepo, logger *slog.Logger) *MediaService {
+	return &MediaService{r: r, logger: logger}
 }
 
 func (s *MediaService) FindMedia(ctx context.Context, mtype, name string) ([]models.MediaItem, error) {

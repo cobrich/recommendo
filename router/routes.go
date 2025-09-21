@@ -1,6 +1,7 @@
 package router
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/cobrich/recommendo/handlers"
@@ -9,9 +10,10 @@ import (
 )
 
 func NewRouter(userHandler *handlers.UserHandler, followHandler *handlers.FollowHandler,
-	mediaHandler *handlers.MediaHandler, recommendationHandler *handlers.RecommendationHandler) http.Handler {
+	mediaHandler *handlers.MediaHandler, recommendationHandler *handlers.RecommendationHandler, logger *slog.Logger) http.Handler {
 	router := chi.NewRouter()
 
+	router.Use(middleware.NewLogger(logger))
 	// Auth Routes
 	router.Post("/register", userHandler.RegisterUser)
 	router.Post("/login", userHandler.LoginUser)

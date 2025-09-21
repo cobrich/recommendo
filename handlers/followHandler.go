@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -13,10 +14,11 @@ import (
 
 type FollowHandler struct {
 	s *service.FollowService
+	logger *slog.Logger
 }
 
-func NewFriendshiphandler(s *service.FollowService) *FollowHandler {
-	return &FollowHandler{s: s}
+func NewFriendshiphandler(s *service.FollowService, logger *slog.Logger) *FollowHandler {
+	return &FollowHandler{s: s, logger: logger}
 }
 
 func (h *FollowHandler) CreateFollow(w http.ResponseWriter, r *http.Request) {
