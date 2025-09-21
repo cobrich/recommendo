@@ -3,15 +3,13 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/cobrich/recommendo/dtos"
 	"github.com/cobrich/recommendo/middleware"
 	"github.com/cobrich/recommendo/service"
+	"github.com/go-chi/chi/v5"
 )
-
-type UserIDRequestDTO struct {
-	UserID int `json:"user_id"`
-}
 
 type FollowHandler struct {
 	s *service.FollowService
@@ -53,32 +51,25 @@ func (h *FollowHandler) CreateFollow(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *FollowHandler) DeleteFollow(w http.ResponseWriter, r *http.Request) {
-	var requestBody dtos.CreateFollowRequestDTO
-
-	decoder := json.NewDecoder(r.Body)
-	err := decoder.Decode(&requestBody)
-	if err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
 	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		http.Error(w, "Could not retrieve user ID from context", http.StatusInternalServerError)
 		return
 	}
 
-	if currentUserID <= 0 || requestBody.ToUserID <= 0 {
+	targetUserIDStr := chi.URLParam(r, "targetUserID")
+	targetUserID, err := strconv.Atoi(targetUserIDStr)
+
+	if currentUserID <= 0 || targetUserID <= 0 {
 		http.Error(w, "User IDs must be positive integers", http.StatusBadRequest)
 		return
 	}
 
-	err = h.s.DeleteFollow(r.Context(), currentUserID, requestBody.ToUserID)
+	err = h.s.DeleteFollow(r.Context(), currentUserID, targetUserID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated) // 201 status
-	w.Write([]byte(`{"status": "follow deleted Successfully"}`))
+	w.WriteHeader(http.StatusNoContent)
 }
