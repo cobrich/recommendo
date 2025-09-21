@@ -47,6 +47,7 @@ func (h *FollowHandler) CreateFollow(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(dtos.StatusResponseDTO{Status: "following was successful"})
 }
 

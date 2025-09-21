@@ -1,5 +1,5 @@
 package dtos
 
 type StatusResponseDTO struct{
-	Status string
+	Status string `json:"status"`
 }
