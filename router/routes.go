@@ -20,25 +20,25 @@ func NewRouter(userHandler *handlers.UserHandler, followHandler *handlers.Follow
 		r.Use(middleware.JWTAuthenticator)
 
 		// POST /follows - create following
-		router.Post("/follows", followHandler.CreateFollow)
+		r.Post("/follows", followHandler.CreateFollow)
 		// DELETE /follows - delete following
-		router.Delete("/follows", followHandler.DeleteFollow)
+		r.Delete("/follows", followHandler.DeleteFollow)
 
-		router.Post("/recommendations", recommendationHandler.CreateRecommendation)
+		r.Post("/recommendations", recommendationHandler.CreateRecommendation)
 
 		// --- User Routes ---
-		router.Get("/users", userHandler.GetUsers)
-		router.Get("/users/{userID}", userHandler.GetUserByID)
+		r.Get("/users", userHandler.GetUsers)
+		r.Get("/me", userHandler.GetUserByID)
 
 		// --- Follow/Friendship Routes ---
-		router.Get("/users/{userID}/friends", userHandler.GetUserFriends)
-		router.Get("/users/{userID}/followers", userHandler.GetUserFollowers)
-		router.Get("/users/{userID}/followings", userHandler.GetUserFollowings)
+		r.Get("/me/friends", userHandler.GetUserFriends)
+		r.Get("/me/followers", userHandler.GetUserFollowers)
+		r.Get("/me/followings", userHandler.GetUserFollowings)
 
 		// --- Recommendation Routes ---
-		router.Get("/users/{userID}/recommandations", recommendationHandler.GetUserRecommendations)
+		r.Get("/me/recommandations", recommendationHandler.GetUserRecommendations)
 
-		router.Get("/media", mediaHandler.GetMedia)
+		r.Get("/media", mediaHandler.GetMedia)
 
 	})
 
