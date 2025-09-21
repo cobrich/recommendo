@@ -3,10 +3,18 @@ package service
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/cobrich/recommendo/models"
 	"github.com/cobrich/recommendo/repo"
+)
+
+var (
+	ErrTargetUserNotFound = errors.New("target user not found")
+	ErrMediaNotFound      = errors.New("media item not found")
+	ErrNotFriends         = errors.New("users are not friends")
+	ErrAlreadyRecommended = errors.New("this media has already been recommended to this user")
 )
 
 type RecommendationService struct {
@@ -33,17 +41,17 @@ func (s *RecommendationService) CreateRecommendation(ctx context.Context, fromID
 	// 1. Check existance of users
 	_, err := s.userService.GetUserByID(ctx, fromID)
 	if err != nil {
-		return err
+		return ErrTargetUserNotFound
 	}
 	_, err = s.userService.GetUserByID(ctx, toID)
 	if err != nil {
-		return err
+		return ErrTargetUserNotFound
 	}
 
 	// 2. Check existance of media
 	_, err = s.mediaRepo.GetMedia(ctx, mediaID)
 	if err != nil {
-		return err
+		return ErrMediaNotFound
 	}
 
 	// 3. Check if users are friends
@@ -52,13 +60,13 @@ func (s *RecommendationService) CreateRecommendation(ctx context.Context, fromID
 		return err
 	}
 	if !areFriends {
-		return fmt.Errorf("users are not friends")
+		return ErrNotFriends
 	}
 
 	// 4. Check is it recommandation first time
 	err = s.r.GetRecommendation(ctx, fromID, toID, mediaID)
 	if err == nil {
-		return fmt.Errorf("this media has already been recommended to this user")
+		return ErrAlreadyRecommended
 	}
 	if err != sql.ErrNoRows {
 		return fmt.Errorf("unexpected error when checking for existing recommendation: %w", err)
@@ -68,10 +76,10 @@ func (s *RecommendationService) CreateRecommendation(ctx context.Context, fromID
 	return s.r.CreateRecommendation(ctx, fromID, toID, mediaID)
 }
 
-func (s *RecommendationService) GetRecommendations (ctx context.Context, userID int, direction string) ([]models.RecommendationDetails, error) {
-    if direction == "sent" {
-        return s.r.GetSentRecommendations(ctx, userID)
-    }
-    
-    return s.r.GetReceivedRecommendations(ctx, userID)
+func (s *RecommendationService) GetRecommendations(ctx context.Context, userID int, direction string) ([]models.RecommendationDetails, error) {
+	if direction == "sent" {
+		return s.r.GetSentRecommendations(ctx, userID)
+	}
+
+	return s.r.GetReceivedRecommendations(ctx, userID)
 }
