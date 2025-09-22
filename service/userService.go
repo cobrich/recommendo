@@ -108,8 +108,8 @@ func (s *UserService) Login(ctx context.Context, loginDTO dtos.LoginUserDTO) (st
 	return tokenString, nil
 }
 
-func (s *UserService) GetUsers(ctx context.Context) ([]models.User, error) {
-	users, err := s.r.GetUsers(ctx)
+func (s *UserService) GetUsers(ctx context.Context, page, limit int) ([]models.User, error) {
+	users, err := s.r.GetUsers(ctx,  page, limit)
 	if err != nil {
 		return nil, err
 	}

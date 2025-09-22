@@ -86,7 +86,14 @@ func (h *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) GetUsers(w http.ResponseWriter, r *http.Request) {
-	users, err := h.s.GetUsers(r.Context())
+
+	page, limit, err := utils.ParsePaginationParams(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	users, err := h.s.GetUsers(r.Context(), page, limit)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

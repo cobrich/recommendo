@@ -42,12 +42,14 @@ func (r *UserRepo) CreateUser(ctx context.Context, user models.User) (models.Use
 	return createdUser, nil
 }
 
-func (r *UserRepo) GetUsers(ctx context.Context) ([]models.User, error) {
-	query := "SELECT user_id, user_name, created_at FROM users ORDER BY user_name"
+func (r *UserRepo) GetUsers(ctx context.Context,  page, limit int) ([]models.User, error) {
+	offset := (page - 1) * limit
+
+	query := "SELECT user_id, user_name, created_at FROM users ORDER BY user_name LIMIT $1 OFFSET $2"
 
 	var users []models.User
 
-	sqlRows, err := r.db.QueryContext(ctx, query)
+	sqlRows, err := r.db.QueryContext(ctx, query, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get users: %w", err)
 	}
