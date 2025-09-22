@@ -10,6 +10,7 @@ import (
 	"github.com/cobrich/recommendo/dtos"
 	"github.com/cobrich/recommendo/middleware"
 	"github.com/cobrich/recommendo/service"
+	"github.com/cobrich/recommendo/utils"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -303,4 +304,46 @@ func (h *UserHandler) UpdateCurrentUser(w http.ResponseWriter, r *http.Request) 
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(responseDTO)
+}
+
+func (h *UserHandler) ChangeCurrentUserPassword(w http.ResponseWriter, r *http.Request) {
+	// 1. Get current user id
+	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// 2. Get passwords from request body
+	var changePasswordDto dtos.ChangePasswordDTO
+	if err := json.NewDecoder(r.Body).Decode(&changePasswordDto); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// 3. Validate for empty
+	if changePasswordDto.CurrentPassword == "" || changePasswordDto.NewPassword == "" {
+		http.Error(w, "Fields 'current_password' and 'new_password' are required", http.StatusBadRequest)
+		return
+	}
+
+	// 4. Call service
+	if err := h.s.ChangeCurrentUserPassword(r.Context(), currentUserID, changePasswordDto); err != nil {
+		var passwordValidationErrors utils.PasswordErrors
+		switch {
+		case errors.Is(err, service.ErrInvalidCredentials):
+			http.Error(w, "Invalid current password", http.StatusForbidden) // 403
+		case errors.As(err, &passwordValidationErrors):
+			// Если ошибка - это наша структура ошибок валидации
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest) // 400
+			json.NewEncoder(w).Encode(passwordValidationErrors)
+		default:
+			h.logger.Error("Failed to change password", "error", err, "userID", currentUserID)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

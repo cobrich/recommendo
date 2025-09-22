@@ -36,6 +36,7 @@ func NewRouter(userHandler *handlers.UserHandler, followHandler *handlers.Follow
 		r.Get("/me", userHandler.GetCurrentUser)
 		r.Delete("/me", userHandler.DeleteCurrentUser)
 		r.Patch("/me", userHandler.UpdateCurrentUser)
+		r.Put("/me/password", userHandler.ChangeCurrentUserPassword)
 		
 		r.Get("/users", userHandler.GetUsers)
 		r.Get("/users/{userID}", userHandler.GetUserByID)

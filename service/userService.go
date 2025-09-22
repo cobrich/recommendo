@@ -19,6 +19,7 @@ var (
 	ErrUserExists         = errors.New("user with this email already exists")
 	ErrInvalidCredentials = errors.New("invalid credentials") // Для логина
 	ErrUserNotFound       = errors.New("user not found")
+	ErrFailedHashPassword = errors.New("failed to hash password")
 )
 
 type UserService struct {
@@ -185,10 +186,40 @@ func (s *UserService) DeleteUser(ctx context.Context, userID int) error {
 func (s *UserService) UpadeUser(ctx context.Context, userID int, userName string) (models.User, error) {
 	updatedUser, err := s.r.UpdateUser(ctx, userID, userName)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows){
+		if errors.Is(err, sql.ErrNoRows) {
 			return models.User{}, ErrUserNotFound
 		}
 		return models.User{}, err
 	}
 	return updatedUser, nil
+}
+
+func (s *UserService) ChangeCurrentUserPassword(ctx context.Context, userID int, changePasswordDto dtos.ChangePasswordDTO) error {
+	// 1. Get user by id
+	user, err := s.r.FindUserByIDWithPassword(ctx, userID)
+	if err != nil {
+		return ErrUserNotFound
+	}
+
+	// 2. Compare with current password
+	if err := bcrypt.CompareHashAndPassword(user.PasswordHash, []byte(changePasswordDto.CurrentPassword)); err != nil {
+		return ErrInvalidCredentials
+	}
+
+	// 3, Validate and Hash new password
+	isValid, errs := utils.ValidatePassword(changePasswordDto.NewPassword)
+	if !isValid {
+		return errs
+	}
+
+	hashedPassword, err := utils.GetPasswordHash(changePasswordDto.NewPassword)
+	if err != nil {
+		return err
+	}
+
+	if err = s.r.UpdatePassword(ctx, userID, []byte(hashedPassword)); err != nil {
+		return err
+	}
+
+	return nil
 }

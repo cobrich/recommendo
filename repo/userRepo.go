@@ -200,6 +200,18 @@ func (r *UserRepo) FindUserByEmail(ctx context.Context, email string) (models.Us
 	return user, nil
 }
 
+// FindUserByIDWithPassword получает ВСЕ данные пользователя, включая хеш.
+func (r *UserRepo) FindUserByIDWithPassword(ctx context.Context, id int) (models.User, error) {
+	var user models.User
+	// Этот запрос выбирает все поля, включая password_hash
+	query := "SELECT user_id, user_name, email, password_hash, created_at FROM users WHERE user_id = $1"
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&user.ID, &user.UserName, &user.Email, &user.PasswordHash, &user.CreatedAt)
+	if err != nil {
+		return models.User{}, err // sql.ErrNoRows будет обработан в сервисе
+	}
+	return user, nil
+}
+
 func (r *UserRepo) DeleteUser(ctx context.Context, userID int) error {
 	query := "DELETE FROM users WHERE user_id = $1"
 
@@ -224,4 +236,17 @@ func (r *UserRepo) UpdateUser(ctx context.Context, userID int, userName string) 
 	}
 
 	return user, nil
+}
+
+func (r *UserRepo) UpdatePassword(ctx context.Context, userID int, newPasswordHash []byte) error {
+	query := "UPDATE users SET password_hash = $1 WHERE user_id = $2"
+	result, err := r.db.ExecContext(ctx, query, newPasswordHash, userID)
+	if err != nil {
+		return err
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
