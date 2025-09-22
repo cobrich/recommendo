@@ -70,7 +70,7 @@ func (h *RecommendationHandler) CreateRecommendation(w http.ResponseWriter, r *h
 	json.NewEncoder(w).Encode(map[string]string{"status": "recommendation created successfully"})
 }
 
-func (h *RecommendationHandler) GetUserRecommendations(w http.ResponseWriter, r *http.Request) {
+func (h *RecommendationHandler) GetCurrentUserRecommendations(w http.ResponseWriter, r *http.Request) {
 	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		// Эта ошибка не должна происходить, если middleware работает правильно,
@@ -81,6 +81,33 @@ func (h *RecommendationHandler) GetUserRecommendations(w http.ResponseWriter, r 
 
 	direction := r.URL.Query().Get("direction")
 	recommendations, err := h.s.GetRecommendations(r.Context(), currentUserID, direction)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if len(recommendations) == 0 {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("[]"))
+		return
+	}
+
+	if err = json.NewEncoder(w).Encode(recommendations); err != nil {
+		http.Error(w, "Failed to encode users to JSON", http.StatusInternalServerError)
+	}
+}
+
+func (h *RecommendationHandler) GetUserRecommendations(w http.ResponseWriter, r *http.Request) {
+	userID, err := strconv.Atoi(chi.URLParam(r, "userID"))
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+	
+	direction := r.URL.Query().Get("direction")
+	recommendations, err := h.s.GetRecommendations(r.Context(), userID, direction)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

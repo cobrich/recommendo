@@ -23,6 +23,8 @@ func NewUserHandler(userService *service.UserService, logger *slog.Logger) *User
 	return &UserHandler{s: userService, logger: logger}
 }
 
+
+// Registering user
 func (h *UserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	var registerDTO dtos.RegisterUserDTO
 	if err := json.NewDecoder(r.Body).Decode(&registerDTO); err != nil {
@@ -56,6 +58,7 @@ func (h *UserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(responseDTO)
 }
 
+// Logging in user
 func (h *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 	// 1. Getting User Information from Request Body
 	var loginDTO dtos.LoginUserDTO
@@ -85,6 +88,7 @@ func (h *UserHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Getting users
 func (h *UserHandler) GetUsers(w http.ResponseWriter, r *http.Request) {
 
 	page, limit, err := utils.ParsePaginationParams(r)
@@ -147,7 +151,9 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *UserHandler) GetUserFriends(w http.ResponseWriter, r *http.Request) {
+
+// Getting user friends
+func (h *UserHandler) GetCurrentUserFriends(w http.ResponseWriter, r *http.Request) {
 
 	page, limit, err := utils.ParsePaginationParams(r)
 	if err != nil {
@@ -178,7 +184,38 @@ func (h *UserHandler) GetUserFriends(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(paginatedResponse)
 }
 
-func (h *UserHandler) GetUserFollowers(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) GetUserFriends(w http.ResponseWriter, r *http.Request) {
+
+	userID, err := strconv.Atoi(chi.URLParam(r, "userID"))
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	page, limit, err := utils.ParsePaginationParams(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	paginatedResponse, err := h.s.GetUserFriends(r.Context(), userID, page, limit)
+	if err != nil {
+		if errors.Is(err, service.ErrUserNotFound) {
+			http.Error(w, err.Error(), http.StatusNotFound)
+		} else {
+			http.Error(w, "Could not process request", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(paginatedResponse)
+}
+
+
+// Getting user followers
+func (h *UserHandler) GetCurrentUserFollowers(w http.ResponseWriter, r *http.Request) {
 
 	page, limit, err := utils.ParsePaginationParams(r)
 	if err != nil {
@@ -209,7 +246,39 @@ func (h *UserHandler) GetUserFollowers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(paginatedResponse)
 }
 
-func (h *UserHandler) GetUserFollowings(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) GetUserFollowers(w http.ResponseWriter, r *http.Request) {
+
+	userID, err := strconv.Atoi(chi.URLParam(r, "userID"))
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	page, limit, err := utils.ParsePaginationParams(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	paginatedResponse, err := h.s.GetUserFollowers(r.Context(), userID, page, limit)
+	if err != nil {
+		if errors.Is(err, service.ErrUserNotFound) {
+			http.Error(w, "user not found", http.StatusNotFound)
+		} else {
+			h.logger.Error("Failed to get user followers", "error", err, "userID", userID)
+			http.Error(w, "failed to get user followers", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(paginatedResponse)
+}
+
+
+// Getting user followings
+func (h *UserHandler) GetCurrentUserFollowings(w http.ResponseWriter, r *http.Request) {
 
 	page, limit, err := utils.ParsePaginationParams(r)
 	if err != nil {
@@ -240,6 +309,38 @@ func (h *UserHandler) GetUserFollowings(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(paginatedResponse)
 }
 
+func (h *UserHandler) GetUserFollowings(w http.ResponseWriter, r *http.Request) {
+
+	userID, err := strconv.Atoi(chi.URLParam(r, "userID"))
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	page, limit, err := utils.ParsePaginationParams(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	paginatedResponse, err := h.s.GetUserFollowings(r.Context(), userID, page, limit)
+	if err != nil {
+		if errors.Is(err, service.ErrUserNotFound) {
+			http.Error(w, "user not found", http.StatusNotFound)
+		} else {
+			h.logger.Error("Failed to get user followings", "error", err, "userID", userID)
+			http.Error(w, "failed to get user followings", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(paginatedResponse)
+}
+
+
+// Deleting user
 func (h *UserHandler) DeleteCurrentUser(w http.ResponseWriter, r *http.Request) {
 	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
@@ -257,6 +358,8 @@ func (h *UserHandler) DeleteCurrentUser(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNoContent)
 }
 
+
+// Updating user
 func (h *UserHandler) UpdateCurrentUser(w http.ResponseWriter, r *http.Request) {
 	// 1. Get current user id
 	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
@@ -300,6 +403,8 @@ func (h *UserHandler) UpdateCurrentUser(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(responseDTO)
 }
 
+
+// Changing user password
 func (h *UserHandler) ChangeCurrentUserPassword(w http.ResponseWriter, r *http.Request) {
 	// 1. Get current user id
 	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
@@ -341,3 +446,6 @@ func (h *UserHandler) ChangeCurrentUserPassword(w http.ResponseWriter, r *http.R
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+
+
