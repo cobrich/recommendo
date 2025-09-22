@@ -31,17 +31,21 @@ func NewRouter(userHandler *handlers.UserHandler, followHandler *handlers.Follow
 
 		r.Post("/recommendations", recommendationHandler.CreateRecommendation)
 
-		// --- User Routes ---
 		r.Get("/users", userHandler.GetUsers)
+	
+		// --- User Routes ---
 		r.Get("/me", userHandler.GetCurrentUser)
 
 		// --- Follow/Friendship Routes ---
 		r.Get("/me/friends", userHandler.GetUserFriends)
+		
 		r.Get("/me/followers", userHandler.GetUserFollowers)
+
 		r.Get("/me/followings", userHandler.GetUserFollowings)
 
 		// --- Recommendation Routes ---
 		r.Get("/me/recommandations", recommendationHandler.GetUserRecommendations)
+		r.Delete("me/recommandations/{recommendation_id}", recommendationHandler.DeleteRecommendation)
 
 		r.Get("/media", mediaHandler.GetMedia)
 

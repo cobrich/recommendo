@@ -5,10 +5,12 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/cobrich/recommendo/dtos"
 	"github.com/cobrich/recommendo/middleware"
 	"github.com/cobrich/recommendo/service"
+	"github.com/go-chi/chi/v5"
 )
 
 type RecommendationHandler struct {
@@ -50,14 +52,15 @@ func (h *RecommendationHandler) CreateRecommendation(w http.ResponseWriter, r *h
 		switch {
 		case errors.Is(err, service.ErrTargetUserNotFound) || errors.Is(err, service.ErrMediaNotFound):
 			http.Error(w, err.Error(), http.StatusNotFound) // 404 Not Found
-
+			return
 		case errors.Is(err, service.ErrNotFriends) || errors.Is(err, service.ErrAlreadyRecommended):
 			http.Error(w, err.Error(), http.StatusConflict) // 409 Conflict
-
+			return
 		default:
 			// Все остальные ошибки - это проблемы на нашей стороне
 			// log.Printf("Internal server error: %v", err) // Хорошо бы логировать для себя
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
 		}
 	}
 
@@ -94,4 +97,37 @@ func (h *RecommendationHandler) GetUserRecommendations(w http.ResponseWriter, r 
 	if err = json.NewEncoder(w).Encode(recommendations); err != nil {
 		http.Error(w, "Failed to encode users to JSON", http.StatusInternalServerError)
 	}
+}
+
+func (h *RecommendationHandler) DeleteRecommendation(w http.ResponseWriter, r *http.Request) {
+	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "invalid user id", http.StatusUnauthorized)
+		return
+	}
+
+	result := chi.URLParam(r, "recommendation_id")
+	recomID, err := strconv.Atoi(result)
+	if err != nil {
+		h.logger.Warn("Invalid recommendation ID in URL", "error", err, "value", result)
+		http.Error(w, "invalid recommendation id", http.StatusBadRequest)
+		return
+	}
+	err = h.s.DeleteRecommendation(r.Context(), currentUserID, recomID)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrUserNotAuthor):
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		case errors.Is(err, service.ErrUserNotAuthor):
+			http.Error(w, err.Error(), http.StatusForbidden)
+			return
+		default:
+			h.logger.Error("Failed to delete recommendation", "error", err, "recommendationID", recomID)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

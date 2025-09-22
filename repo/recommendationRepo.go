@@ -113,7 +113,6 @@ func (r *RecommendationRepo) GetSentRecommendations(ctx context.Context, userID 
 	return recommendations, nil
 }
 
-
 // GetReceivedRecommendations возвращает список рекомендаций, ПОЛУЧЕННЫХ пользователем.
 func (r *RecommendationRepo) GetReceivedRecommendations(ctx context.Context, userID int) ([]models.RecommendationDetails, error) {
 	// Запрос очень похож, но меняются условия в JOIN и WHERE.
@@ -138,8 +137,8 @@ func (r *RecommendationRepo) GetReceivedRecommendations(ctx context.Context, use
 		ORDER BY
 			r.created_at DESC;
 	`
-    
-    // Код для выполнения запроса и сканирования будет точно таким же, как в GetSentRecommendations
+
+	// Код для выполнения запроса и сканирования будет точно таким же, как в GetSentRecommendations
 	rows, err := r.DB.QueryContext(ctx, query, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get received recommendations: %w", err)
@@ -161,4 +160,47 @@ func (r *RecommendationRepo) GetReceivedRecommendations(ctx context.Context, use
 	}
 
 	return recommendations, nil
+}
+
+func (r *RecommendationRepo) GetRecommendationByID(ctx context.Context, recomID int) (models.Recommendation, error) {
+	var recommendation models.Recommendation
+
+	query := "SELECT recommendation_id, from_user_id, to_user_id, media_id, created_at FROM recommendations WHERE recommendation_id=$1"
+
+	if err := r.DB.QueryRowContext(ctx, query, recomID).Scan(
+		&recommendation.ID, &recommendation.FromUserID,
+		&recommendation.ToUserID, &recommendation.MediaID,
+		&recommendation.CreatedAt); err != nil {
+		if err == sql.ErrNoRows {
+			return models.Recommendation{}, sql.ErrNoRows
+		}
+		return models.Recommendation{}, err
+	}
+
+	return recommendation, nil
+}
+
+func (r *RecommendationRepo) DeleteRecommendation(ctx context.Context, recomID int) error {
+	query := `
+		DELETE FROM recommendations 
+		WHERE recommendation_id = $1
+		`
+
+	result, err := r.DB.ExecContext(ctx, query, recomID)
+	if err != nil {
+		// Если произошла ошибка (например, нарушение UNIQUE constraint), мы ее получим.
+		return fmt.Errorf("failed to delete recommendation: %w", err)
+	}
+
+	// 3. (Опционально, но хорошая практика) Проверяем, что была затронута ровно одна строка.
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		// Маловероятная ошибка, но проверка не помешает.
+		return fmt.Errorf("failed to check rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("recommendation not found")
+	}
+
+	return nil
 }

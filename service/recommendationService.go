@@ -12,10 +12,12 @@ import (
 )
 
 var (
-	ErrTargetUserNotFound = errors.New("target user not found")
-	ErrMediaNotFound      = errors.New("media item not found")
-	ErrNotFriends         = errors.New("users are not friends")
-	ErrAlreadyRecommended = errors.New("this media has already been recommended to this user")
+	ErrTargetUserNotFound     = errors.New("target user not found")
+	ErrMediaNotFound          = errors.New("media item not found")
+	ErrNotFriends             = errors.New("users are not friends")
+	ErrAlreadyRecommended     = errors.New("this media has already been recommended to this user")
+	ErrUserNotAuthor          = errors.New("current user not created this recommendation")
+	ErrRecommendationNotFound = errors.New("recommendation not found")
 )
 
 type RecommendationService struct {
@@ -36,7 +38,7 @@ func NewRecommendationService(rRepo *repo.RecommendationRepo, mRepo *repo.MediaR
 		mediaRepo:     mRepo,
 		userService:   uService,
 		followService: fService,
-		logger: logger,
+		logger:        logger,
 	}
 }
 
@@ -85,4 +87,28 @@ func (s *RecommendationService) GetRecommendations(ctx context.Context, userID i
 	}
 
 	return s.r.GetReceivedRecommendations(ctx, userID)
+}
+
+func (s *RecommendationService) DeleteRecommendation(ctx context.Context, currentUserID, recomID int) error {
+	// 2. Check existing recommendation
+	recommendation, err := s.r.GetRecommendationByID(ctx, recomID)
+	if err != nil{
+		if errors.Is(err, sql.ErrNoRows){
+			return ErrRecommendationNotFound
+		}
+		return err
+	}
+	
+	// 3. Check owner is current ?
+	if currentUserID != recommendation.FromUserID {
+		return ErrUserNotAuthor
+	}
+	
+	// 4. Delete
+	if err = s.r.DeleteRecommendation(ctx, recomID); err != nil{
+		return err
+	}
+	
+	// 5. Return error or nil
+	return nil
 }
