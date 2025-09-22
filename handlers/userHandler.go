@@ -5,10 +5,12 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/cobrich/recommendo/dtos"
 	"github.com/cobrich/recommendo/middleware"
 	"github.com/cobrich/recommendo/service"
+	"github.com/go-chi/chi/v5"
 )
 
 type UserHandler struct {
@@ -125,6 +127,24 @@ func (h *UserHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request){
+	userID, err := strconv.Atoi(chi.URLParam(r, "userID"))
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+	}
+	user, err := h.s.GetUserByID(r.Context(), userID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if err := json.NewEncoder(w).Encode(user); err != nil {
+		http.Error(w, "Failed to encode users to JSON", http.StatusInternalServerError)
+	}
+}
+
 func (h *UserHandler) GetUserFriends(w http.ResponseWriter, r *http.Request) {
 
 	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
@@ -222,4 +242,8 @@ func (h *UserHandler) GetUserFollowings(w http.ResponseWriter, r *http.Request) 
 	if err := json.NewEncoder(w).Encode(users); err != nil {
 		http.Error(w, "Failed to encode users to JSON", http.StatusInternalServerError)
 	}
+}
+
+func (h *UserHandler) DeleteMe(w http.ResponseWriter, r *http.Request) {
+
 }
