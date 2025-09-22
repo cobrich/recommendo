@@ -34,7 +34,7 @@ func NewRouter(userHandler *handlers.UserHandler, followHandler *handlers.Follow
 		
 		// --- User Routes ---
 		r.Get("/me", userHandler.GetCurrentUser)
-		r.Delete("/me", userHandler.DeleteMe)
+		r.Delete("/me", userHandler.DeleteCurrentUser)
 		
 		r.Get("/users", userHandler.GetUsers)
 		r.Get("/users/{userID}", userHandler.GetUserByID)

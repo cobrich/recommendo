@@ -9,12 +9,17 @@ import (
 )
 
 type MediaRepo struct {
-	DB *sql.DB
+	db DBTX
 }
 
 func NewMediaRepo(db *sql.DB) *MediaRepo {
-	return &MediaRepo{DB: db}
+	return &MediaRepo{db: db}
 }
+
+func (r *MediaRepo) WithTx(tx *sql.Tx) *MediaRepo {
+    return &MediaRepo{db: tx}
+}
+
 
 func (r *MediaRepo) FindMedia(ctx context.Context, mtype, name string) ([]models.MediaItem, error) {
 	// 1. Начинаем с базового запроса
@@ -42,7 +47,7 @@ func (r *MediaRepo) FindMedia(ctx context.Context, mtype, name string) ([]models
 	query += " ORDER BY name LIMIT 20"
 
 	// 5. Выполняем финальный, собранный запрос
-	sqlRows, err := r.DB.QueryContext(ctx, query, args...) // 'args...' - это специальный синтаксис для передачи среза как отдельных аргументов
+	sqlRows, err := r.db.QueryContext(ctx, query, args...) // 'args...' - это специальный синтаксис для передачи среза как отдельных аргументов
 	if err != nil {
 		return nil, fmt.Errorf("failed to get media items: %w", err)
 	}
@@ -71,7 +76,7 @@ func (r *MediaRepo) GetMedia(ctx context.Context, mediaID int) (models.MediaItem
 	query := "SELECT media_id, item_type, name, year, author, created_at FROM media_items WHERE media_id=$1"
 
 	var media_item models.MediaItem
-	if err := r.DB.QueryRowContext(ctx, query, mediaID).Scan(
+	if err := r.db.QueryRowContext(ctx, query, mediaID).Scan(
 		&media_item.ID,
 		&media_item.Type,
 		&media_item.Name,

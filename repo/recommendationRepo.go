@@ -9,12 +9,17 @@ import (
 )
 
 type RecommendationRepo struct {
-	DB *sql.DB
+	db DBTX
 }
 
 func NewRecommendationRepo(db *sql.DB) *RecommendationRepo {
-	return &RecommendationRepo{DB: db}
+	return &RecommendationRepo{db: db}
 }
+
+func (r *RecommendationRepo) WithTx(tx *sql.Tx) *RecommendationRepo {
+    return &RecommendationRepo{db: tx}
+}
+
 
 func (r *RecommendationRepo) GetRecommendation(ctx context.Context, fromId, toID, mediaID int) error {
 	var recommendation models.Recommendation
@@ -22,7 +27,7 @@ func (r *RecommendationRepo) GetRecommendation(ctx context.Context, fromId, toID
 	query := `SELECT recommendation_id, from_user_id, to_user_id, media_id, created_at FROM recommendations 
 	WHERE from_user_id=$1 and to_user_id=$2 and media_id=$3`
 
-	if err := r.DB.QueryRowContext(ctx, query, fromId, toID, mediaID).Scan(
+	if err := r.db.QueryRowContext(ctx, query, fromId, toID, mediaID).Scan(
 		&recommendation.ID,
 		&recommendation.FromUserID,
 		&recommendation.ToUserID,
@@ -43,7 +48,7 @@ func (r *RecommendationRepo) CreateRecommendation(ctx context.Context, fromId, t
         VALUES ($1, $2, $3)
 		`
 
-	result, err := r.DB.ExecContext(ctx, query, fromId, toID, mediaID)
+	result, err := r.db.ExecContext(ctx, query, fromId, toID, mediaID)
 	if err != nil {
 		// Если произошла ошибка (например, нарушение UNIQUE constraint), мы ее получим.
 		return fmt.Errorf("failed to create recommendation: %w", err)
@@ -88,7 +93,7 @@ func (r *RecommendationRepo) GetSentRecommendations(ctx context.Context, userID 
 			r.created_at DESC;
 	`
 
-	rows, err := r.DB.QueryContext(ctx, query, userID)
+	rows, err := r.db.QueryContext(ctx, query, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get sent recommendations: %w", err)
 	}
@@ -139,7 +144,7 @@ func (r *RecommendationRepo) GetReceivedRecommendations(ctx context.Context, use
 	`
 
 	// Код для выполнения запроса и сканирования будет точно таким же, как в GetSentRecommendations
-	rows, err := r.DB.QueryContext(ctx, query, userID)
+	rows, err := r.db.QueryContext(ctx, query, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get received recommendations: %w", err)
 	}
@@ -167,7 +172,7 @@ func (r *RecommendationRepo) GetRecommendationByID(ctx context.Context, recomID 
 
 	query := "SELECT recommendation_id, from_user_id, to_user_id, media_id, created_at FROM recommendations WHERE recommendation_id=$1"
 
-	if err := r.DB.QueryRowContext(ctx, query, recomID).Scan(
+	if err := r.db.QueryRowContext(ctx, query, recomID).Scan(
 		&recommendation.ID, &recommendation.FromUserID,
 		&recommendation.ToUserID, &recommendation.MediaID,
 		&recommendation.CreatedAt); err != nil {
@@ -186,7 +191,7 @@ func (r *RecommendationRepo) DeleteRecommendation(ctx context.Context, recomID i
 		WHERE recommendation_id = $1
 		`
 
-	result, err := r.DB.ExecContext(ctx, query, recomID)
+	result, err := r.db.ExecContext(ctx, query, recomID)
 	if err != nil {
 		// Если произошла ошибка (например, нарушение UNIQUE constraint), мы ее получим.
 		return fmt.Errorf("failed to delete recommendation: %w", err)
@@ -203,4 +208,16 @@ func (r *RecommendationRepo) DeleteRecommendation(ctx context.Context, recomID i
 	}
 
 	return nil
+}
+
+// DeleteAllUserRecommendations удаляет все рекомендации, отправленные
+// или полученные пользователем.
+func (r *RecommendationRepo) DeleteAllUserRecommendations(ctx context.Context, userID int) error {
+    query := "DELETE FROM recommendations WHERE from_user_id = $1 OR to_user_id = $1"
+
+    _, err := r.db.ExecContext(ctx, query, userID)
+    if err != nil {
+        return fmt.Errorf("failed to delete all user recommendations: %w", err)
+    }
+    return nil
 }

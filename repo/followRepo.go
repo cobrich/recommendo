@@ -7,12 +7,17 @@ import (
 )
 
 type FollowRepo struct {
-	DB *sql.DB
+	db DBTX
 }
 
 func NewFollowRepo(db *sql.DB) *FollowRepo {
-	return &FollowRepo{DB: db}
+	return &FollowRepo{db: db}
 }
+
+func (r *FollowRepo) WithTx(tx *sql.Tx) *FollowRepo {
+    return &FollowRepo{db: tx}
+}
+
 
 func (r *FollowRepo) CreateFollow(ctx context.Context, followerID, followingID int) error {
 	query := `
@@ -20,7 +25,7 @@ func (r *FollowRepo) CreateFollow(ctx context.Context, followerID, followingID i
         VALUES ($1, $2)
 		`
 
-	result, err := r.DB.ExecContext(ctx, query, followerID, followingID)
+	result, err := r.db.ExecContext(ctx, query, followerID, followingID)
 	if err != nil {
 		// Если произошла ошибка (например, нарушение UNIQUE constraint), мы ее получим.
 		return fmt.Errorf("failed to create following: %w", err)
@@ -45,7 +50,7 @@ func (r *FollowRepo) DeleteFollow(ctx context.Context, followerID, followingID i
 		WHERE follower_id = $1 AND following_id= $2
 		`
 
-	result, err := r.DB.ExecContext(ctx, query, followerID, followingID)
+	result, err := r.db.ExecContext(ctx, query, followerID, followingID)
 	if err != nil {
 		// Если произошла ошибка (например, нарушение UNIQUE constraint), мы ее получим.
 		return fmt.Errorf("failed to delete follow: %w", err)
@@ -75,10 +80,20 @@ func (r *FollowRepo) AreUsersFriends(ctx context.Context, userID1, userID2 int) 
 	`
 	var areFriends bool
 
-	err := r.DB.QueryRowContext(ctx, query, userID1, userID2).Scan(&areFriends)
+	err := r.db.QueryRowContext(ctx, query, userID1, userID2).Scan(&areFriends)
 	if err != nil {
 		return false, fmt.Errorf("failed to check friendship: %w", err)
 	}
 
 	return areFriends, nil
+}
+
+func (r *FollowRepo) DeleteAllUserFollows(ctx context.Context, userID int) error {
+    query := "DELETE FROM follows WHERE follower_id = $1 OR following_id = $1"
+    
+    _, err := r.db.ExecContext(ctx, query, userID)
+    if err != nil {
+        return fmt.Errorf("failed to delete all user follows: %w", err)
+    }
+    return nil
 }

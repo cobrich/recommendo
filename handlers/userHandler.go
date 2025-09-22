@@ -244,6 +244,19 @@ func (h *UserHandler) GetUserFollowings(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-func (h *UserHandler) DeleteMe(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) DeleteCurrentUser(w http.ResponseWriter, r *http.Request) {
+    currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
+    if !ok {
+        http.Error(w, "Unauthorized", http.StatusUnauthorized)
+        return
+    }
 
+    err := h.s.DeleteUser(r.Context(), currentUserID)
+    if err != nil {
+        // Здесь уже есть логгер из сервиса, можно добавить еще один в хендлере
+        http.Error(w, "Failed to delete user account", http.StatusInternalServerError)
+        return
+    }
+
+    w.WriteHeader(http.StatusNoContent)
 }

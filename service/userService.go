@@ -22,12 +22,22 @@ var (
 )
 
 type UserService struct {
-	r      *repo.UserRepo
-	logger *slog.Logger
+	db *sql.DB // <-- Добавляем это поле
+	r  *repo.UserRepo
+	// Добавляем зависимости от других репозиториев
+	followRepo *repo.FollowRepo
+	recomRepo  *repo.RecommendationRepo
+	logger     *slog.Logger
 }
 
-func NewUserService(userRepo *repo.UserRepo, logger *slog.Logger) *UserService {
-	return &UserService{r: userRepo, logger: logger}
+func NewUserService(db *sql.DB, userRepo *repo.UserRepo, followRepo *repo.FollowRepo, recomRepo *repo.RecommendationRepo, logger *slog.Logger) *UserService {
+	return &UserService{
+		db:         db,
+		r:          userRepo,
+		followRepo: followRepo,
+		recomRepo:  recomRepo,
+		logger:     logger,
+	}
 }
 
 func (s *UserService) Register(ctx context.Context, registerDTO dtos.RegisterUserDTO) (models.User, error) {
@@ -135,4 +145,39 @@ func (s *UserService) GetUserFollowings(ctx context.Context, id int) ([]models.U
 		return nil, err
 	}
 	return users, nil
+}
+
+func (s *UserService) DeleteUser(ctx context.Context, userID int) error {
+	// 1. Начинаем транзакцию
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		s.logger.Error("Failed to begin transaction", "error", err)
+		return err
+	}
+	// defer с recover гарантирует, что если что-то пойдет не так, транзакция будет отменена
+	defer tx.Rollback()
+
+	// 2. Создаем экземпляры репозиториев, работающие ВНУТРИ этой транзакции
+	userRepoTx := s.r.WithTx(tx)
+	followRepoTx := s.followRepo.WithTx(tx)
+	recomRepoTx := s.recomRepo.WithTx(tx)
+
+	// 3. Выполняем операции в правильном порядке (от зависимых к основной)
+	if err := recomRepoTx.DeleteAllUserRecommendations(ctx, userID); err != nil {
+		s.logger.Error("Failed to delete user recommendations", "error", err, "userID", userID)
+		return err
+	}
+
+	if err := followRepoTx.DeleteAllUserFollows(ctx, userID); err != nil {
+		s.logger.Error("Failed to delete user follows", "error", err, "userID", userID)
+		return err
+	}
+
+	if err := userRepoTx.DeleteUser(ctx, userID); err != nil {
+		s.logger.Error("Failed to delete user", "error", err, "userID", userID)
+		return err
+	}
+
+	// 4. Если все прошло успешно, коммитим транзакцию
+	return tx.Commit()
 }

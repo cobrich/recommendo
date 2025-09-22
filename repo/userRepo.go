@@ -9,11 +9,15 @@ import (
 )
 
 type UserRepo struct {
-	DB *sql.DB
+	db DBTX
 }
 
 func NewUserRepo(db *sql.DB) *UserRepo {
-	return &UserRepo{DB: db}
+	return &UserRepo{db: db}
+}
+
+func (r *UserRepo) WithTx(tx *sql.Tx) *UserRepo {
+    return &UserRepo{db: tx}
 }
 
 func (r *UserRepo) CreateUser(ctx context.Context, user models.User) (models.User, error) {
@@ -24,7 +28,7 @@ func (r *UserRepo) CreateUser(ctx context.Context, user models.User) (models.Use
 		VALUES ($1, $2, $3) 
 		RETURNING user_id, user_name, email, created_at`
 
-	err := r.DB.QueryRowContext(ctx, query, user.UserName, user.Email, user.PasswordHash).Scan(
+	err := r.db.QueryRowContext(ctx, query, user.UserName, user.Email, user.PasswordHash).Scan(
 		&createdUser.ID,
 		&createdUser.UserName,
 		&createdUser.Email,
@@ -43,7 +47,7 @@ func (r *UserRepo) GetUsers(ctx context.Context) ([]models.User, error) {
 
 	var users []models.User
 
-	sqlRows, err := r.DB.QueryContext(ctx, query)
+	sqlRows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get users: %w", err)
 	}
@@ -67,7 +71,7 @@ func (r *UserRepo) GetUserByID(ctx context.Context, id int) (models.User, error)
 
 	var user models.User
 
-	err := r.DB.QueryRowContext(ctx, query, id).Scan(&user.ID, &user.UserName, &user.CreatedAt)
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&user.ID, &user.UserName, &user.CreatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return models.User{}, fmt.Errorf("user with id %d not found", id)
@@ -103,7 +107,7 @@ func (r *UserRepo) GetUserFriends(ctx context.Context, id int) ([]models.User, e
 		    f1.follower_id = $1;
 	`
 
-	sqlRows, err := r.DB.QueryContext(ctx, query, id)
+	sqlRows, err := r.db.QueryContext(ctx, query, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user friends: %w", err)
 	}
@@ -136,7 +140,7 @@ func (r *UserRepo) GetUserFollowers(ctx context.Context, id int) ([]models.User,
 		    f.following_id = $1;
 	`
 
-	sqlRows, err := r.DB.QueryContext(ctx, query, id)
+	sqlRows, err := r.db.QueryContext(ctx, query, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user friends: %w", err)
 	}
@@ -169,7 +173,7 @@ func (r *UserRepo) GetUserFollowings(ctx context.Context, id int) ([]models.User
 		    f.follower_id = $1;
 	`
 
-	sqlRows, err := r.DB.QueryContext(ctx, query, id)
+	sqlRows, err := r.db.QueryContext(ctx, query, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user friends: %w", err)
 	}
@@ -189,9 +193,19 @@ func (r *UserRepo) GetUserFollowings(ctx context.Context, id int) ([]models.User
 func (r *UserRepo) FindUserByEmail(ctx context.Context, email string) (models.User, error) {
 	var user models.User
 	query := "SELECT user_id, user_name, email, password_hash, created_at FROM users WHERE email = $1"
-	err := r.DB.QueryRowContext(ctx, query, email).Scan(&user.ID, &user.UserName, &user.Email, &user.PasswordHash, &user.CreatedAt)
+	err := r.db.QueryRowContext(ctx, query, email).Scan(&user.ID, &user.UserName, &user.Email, &user.PasswordHash, &user.CreatedAt)
 	if err != nil {
 		return models.User{}, err // err может быть sql.ErrNoRows, это нормально
 	}
 	return user, nil
+}
+
+func (r *UserRepo)DeleteUser(ctx context.Context, userID int) error {
+    query := "DELETE FROM users WHERE user_id = $1"
+
+    _, err := r.db.ExecContext(ctx, query, userID)
+    if err != nil {
+        return fmt.Errorf("failed to delete user: %w", err)
+    }
+    return nil
 }

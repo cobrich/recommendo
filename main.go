@@ -47,7 +47,7 @@ func main() {
 	recommendationRepo := repo.NewRecommendationRepo(db)
 
 	// Services
-	userService := service.NewUserService(userRepo, logger)
+	userService := service.NewUserService(db, userRepo, followRepo, recommendationRepo, logger)
 	followService := service.NewFollowService(followRepo, logger)
 	mediaService := service.NewMediaService(mediaRepo, logger)
 	recommendationService := service.NewRecommendationService(recommendationRepo, mediaRepo, userService, followService, logger)
