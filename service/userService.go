@@ -181,3 +181,14 @@ func (s *UserService) DeleteUser(ctx context.Context, userID int) error {
 	// 4. Если все прошло успешно, коммитим транзакцию
 	return tx.Commit()
 }
+
+func (s *UserService) UpadeUser(ctx context.Context, userID int, userName string) (models.User, error) {
+	updatedUser, err := s.r.UpdateUser(ctx, userID, userName)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows){
+			return models.User{}, ErrUserNotFound
+		}
+		return models.User{}, err
+	}
+	return updatedUser, nil
+}

@@ -127,7 +127,7 @@ func (h *UserHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request){
+func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	userID, err := strconv.Atoi(chi.URLParam(r, "userID"))
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
@@ -142,6 +142,7 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request){
 
 	if err := json.NewEncoder(w).Encode(user); err != nil {
 		http.Error(w, "Failed to encode users to JSON", http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -245,18 +246,61 @@ func (h *UserHandler) GetUserFollowings(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *UserHandler) DeleteCurrentUser(w http.ResponseWriter, r *http.Request) {
-    currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
-    if !ok {
-        http.Error(w, "Unauthorized", http.StatusUnauthorized)
-        return
-    }
+	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 
-    err := h.s.DeleteUser(r.Context(), currentUserID)
-    if err != nil {
-        // Здесь уже есть логгер из сервиса, можно добавить еще один в хендлере
-        http.Error(w, "Failed to delete user account", http.StatusInternalServerError)
-        return
-    }
+	err := h.s.DeleteUser(r.Context(), currentUserID)
+	if err != nil {
+		// Здесь уже есть логгер из сервиса, можно добавить еще один в хендлере
+		http.Error(w, "Failed to delete user account", http.StatusInternalServerError)
+		return
+	}
 
-    w.WriteHeader(http.StatusNoContent)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *UserHandler) UpdateCurrentUser(w http.ResponseWriter, r *http.Request) {
+	// 1. Get current user id
+	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// 2. Get user name from json body
+	var user dtos.UpdateUserDTO
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		http.Error(w, "failed to decode json", http.StatusBadRequest)
+		return
+	}
+
+	if user.UserName == nil {
+		http.Error(w, "empty user name", http.StatusBadRequest)
+		return
+	}
+
+	updatedUser, err := h.s.UpadeUser(r.Context(), currentUserID, *user.UserName)
+	if err != nil {
+		if errors.Is(err, service.ErrUserNotFound) {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "failed to upadate user", http.StatusInternalServerError)
+		return
+	}
+
+	responseDTO := dtos.UserResponseDTO{
+		ID:        updatedUser.ID,
+		UserName:  updatedUser.UserName,
+		Email:     updatedUser.Email,
+		CreatedAt: updatedUser.CreatedAt,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(responseDTO)
 }

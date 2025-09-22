@@ -17,7 +17,7 @@ func NewUserRepo(db *sql.DB) *UserRepo {
 }
 
 func (r *UserRepo) WithTx(tx *sql.Tx) *UserRepo {
-    return &UserRepo{db: tx}
+	return &UserRepo{db: tx}
 }
 
 func (r *UserRepo) CreateUser(ctx context.Context, user models.User) (models.User, error) {
@@ -200,12 +200,28 @@ func (r *UserRepo) FindUserByEmail(ctx context.Context, email string) (models.Us
 	return user, nil
 }
 
-func (r *UserRepo)DeleteUser(ctx context.Context, userID int) error {
-    query := "DELETE FROM users WHERE user_id = $1"
+func (r *UserRepo) DeleteUser(ctx context.Context, userID int) error {
+	query := "DELETE FROM users WHERE user_id = $1"
 
-    _, err := r.db.ExecContext(ctx, query, userID)
-    if err != nil {
-        return fmt.Errorf("failed to delete user: %w", err)
-    }
-    return nil
+	_, err := r.db.ExecContext(ctx, query, userID)
+	if err != nil {
+		return fmt.Errorf("failed to delete user: %w", err)
+	}
+	return nil
+}
+
+func (r *UserRepo) UpdateUser(ctx context.Context, userID int, userName string) (models.User, error) {
+	var user models.User
+
+	query := "UPDATE users SET user_name = $1 WHERE user_id = $2 RETURNING user_id, user_name, email, created_at"
+
+	err := r.db.QueryRowContext(ctx, query, userName, userID).Scan(&user.ID, &user.UserName, &user.Email, &user.CreatedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return models.User{}, sql.ErrNoRows
+		}
+		return models.User{}, fmt.Errorf("failed to update user name")
+	}
+
+	return user, nil
 }
