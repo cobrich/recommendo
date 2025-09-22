@@ -93,23 +93,16 @@ func (h *UserHandler) GetUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	users, err := h.s.GetUsers(r.Context(), page, limit)
+	// Сервис теперь возвращает готовую DTO
+	paginatedResponse, err := h.s.GetUsers(r.Context(), page, limit)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Failed to get users", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-
-	if len(users) == 0 {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("[]"))
-		return
-	}
-
-	if err := json.NewEncoder(w).Encode(users); err != nil {
-		http.Error(w, "Failed to encode users to JSON", http.StatusInternalServerError)
-	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(paginatedResponse)
 }
 
 func (h *UserHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
@@ -156,6 +149,12 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 
 func (h *UserHandler) GetUserFriends(w http.ResponseWriter, r *http.Request) {
 
+	page, limit, err := utils.ParsePaginationParams(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		// Эта ошибка не должна происходить, если middleware работает правильно,
@@ -164,7 +163,7 @@ func (h *UserHandler) GetUserFriends(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	users, err := h.s.GetUserFriends(r.Context(), currentUserID)
+	paginatedResponse, err := h.s.GetUserFriends(r.Context(), currentUserID, page, limit)
 	if err != nil {
 		if errors.Is(err, service.ErrUserNotFound) {
 			http.Error(w, err.Error(), http.StatusNotFound)
@@ -175,20 +174,18 @@ func (h *UserHandler) GetUserFriends(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-
-	if len(users) == 0 {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("[]"))
-		return
-	}
-
-	if err := json.NewEncoder(w).Encode(users); err != nil {
-		http.Error(w, "Failed to encode users to JSON", http.StatusInternalServerError)
-	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(paginatedResponse)
 }
 
 func (h *UserHandler) GetUserFollowers(w http.ResponseWriter, r *http.Request) {
 
+	page, limit, err := utils.ParsePaginationParams(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		// Эта ошибка не должна происходить, если middleware работает правильно,
@@ -197,7 +194,7 @@ func (h *UserHandler) GetUserFollowers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	users, err := h.s.GetUserFollowers(r.Context(), currentUserID)
+	paginatedResponse, err := h.s.GetUserFollowers(r.Context(), currentUserID, page, limit)
 	if err != nil {
 		if errors.Is(err, service.ErrUserNotFound) {
 			http.Error(w, err.Error(), http.StatusNotFound)
@@ -208,20 +205,18 @@ func (h *UserHandler) GetUserFollowers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-
-	if len(users) == 0 {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("[]"))
-		return
-	}
-
-	if err := json.NewEncoder(w).Encode(users); err != nil {
-		http.Error(w, "Failed to encode users to JSON", http.StatusInternalServerError)
-	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(paginatedResponse)
 }
 
 func (h *UserHandler) GetUserFollowings(w http.ResponseWriter, r *http.Request) {
 
+	page, limit, err := utils.ParsePaginationParams(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		// Эта ошибка не должна происходить, если middleware работает правильно,
@@ -230,7 +225,7 @@ func (h *UserHandler) GetUserFollowings(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	users, err := h.s.GetUserFollowings(r.Context(), currentUserID)
+	paginatedResponse, err := h.s.GetUserFollowings(r.Context(), currentUserID, page, limit)
 	if err != nil {
 		if errors.Is(err, service.ErrUserNotFound) {
 			http.Error(w, err.Error(), http.StatusNotFound)
@@ -241,16 +236,8 @@ func (h *UserHandler) GetUserFollowings(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-
-	if len(users) == 0 {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("[]"))
-		return
-	}
-
-	if err := json.NewEncoder(w).Encode(users); err != nil {
-		http.Error(w, "Failed to encode users to JSON", http.StatusInternalServerError)
-	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(paginatedResponse)
 }
 
 func (h *UserHandler) DeleteCurrentUser(w http.ResponseWriter, r *http.Request) {

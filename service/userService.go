@@ -108,12 +108,25 @@ func (s *UserService) Login(ctx context.Context, loginDTO dtos.LoginUserDTO) (st
 	return tokenString, nil
 }
 
-func (s *UserService) GetUsers(ctx context.Context, page, limit int) ([]models.User, error) {
-	users, err := s.r.GetUsers(ctx,  page, limit)
+func (s *UserService) GetUsers(ctx context.Context, page, limit int) (*dtos.PaginatedResponseDTO[models.User], error) {
+	users, total, err := s.r.GetUsers(ctx, page, limit)
 	if err != nil {
 		return nil, err
 	}
-	return users, nil
+
+	// Вычисляем общее количество страниц
+	totalPages := 0
+	if total > 0 {
+		totalPages = int((total + int64(limit) - 1) / int64(limit))
+	}
+
+	return &dtos.PaginatedResponseDTO[models.User]{
+		Data:       users,
+		Total:      total,
+		Page:       page,
+		Limit:      limit,
+		TotalPages: totalPages,
+	}, nil
 }
 
 func (s *UserService) GetUserByID(ctx context.Context, id int) (models.User, error) {
@@ -124,28 +137,72 @@ func (s *UserService) GetUserByID(ctx context.Context, id int) (models.User, err
 	return user, nil
 }
 
-func (s *UserService) GetUserFriends(ctx context.Context, id int) ([]models.User, error) {
-	users, err := s.r.GetUserFriends(ctx, id)
+func (s *UserService) GetUserFriends(ctx context.Context, userID, page, limit int) (*dtos.PaginatedResponseDTO[models.User], error) {
+	// Вызываем обновленный метод репозитория
+	users, total, err := s.r.GetUserFriends(ctx, userID, page, limit)
 	if err != nil {
 		return nil, err
 	}
-	return users, nil
+
+	// Вычисляем общее количество страниц
+	totalPages := 0
+	if total > 0 {
+		// Формула для вычисления количества страниц
+		totalPages = int((total + int64(limit) - 1) / int64(limit))
+	}
+
+	// Упаковываем все в DTO для ответа
+	return &dtos.PaginatedResponseDTO[models.User]{
+		Data:       users,
+		Total:      total,
+		Page:       page,
+		Limit:      limit,
+		TotalPages: totalPages,
+	}, nil
 }
 
-func (s *UserService) GetUserFollowers(ctx context.Context, id int) ([]models.User, error) {
-	users, err := s.r.GetUserFollowers(ctx, id)
+func (s *UserService) GetUserFollowers(ctx context.Context, userID, page, limit int) (*dtos.PaginatedResponseDTO[models.User], error) {
+	users, total, err := s.r.GetUserFollowers(ctx, userID, page, limit)
 	if err != nil {
 		return nil, err
 	}
-	return users, nil
+	// Вычисляем общее количество страниц
+	totalPages := 0
+	if total > 0 {
+		// Формула для вычисления количества страниц
+		totalPages = int((total + int64(limit) - 1) / int64(limit))
+	}
+
+	// Упаковываем все в DTO для ответа
+	return &dtos.PaginatedResponseDTO[models.User]{
+		Data:       users,
+		Total:      total,
+		Page:       page,
+		Limit:      limit,
+		TotalPages: totalPages,
+	}, nil
 }
 
-func (s *UserService) GetUserFollowings(ctx context.Context, id int) ([]models.User, error) {
-	users, err := s.r.GetUserFollowings(ctx, id)
+func (s *UserService) GetUserFollowings(ctx context.Context, userID, page, limit int) (*dtos.PaginatedResponseDTO[models.User], error) {
+	users, total, err := s.r.GetUserFollowings(ctx, userID, page, limit)
 	if err != nil {
 		return nil, err
 	}
-	return users, nil
+	// Вычисляем общее количество страниц
+	totalPages := 0
+	if total > 0 {
+		// Формула для вычисления количества страниц
+		totalPages = int((total + int64(limit) - 1) / int64(limit))
+	}
+
+	// Упаковываем все в DTO для ответа
+	return &dtos.PaginatedResponseDTO[models.User]{
+		Data:       users,
+		Total:      total,
+		Page:       page,
+		Limit:      limit,
+		TotalPages: totalPages,
+	}, nil
 }
 
 func (s *UserService) DeleteUser(ctx context.Context, userID int) error {

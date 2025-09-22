@@ -42,7 +42,20 @@ func (r *UserRepo) CreateUser(ctx context.Context, user models.User) (models.Use
 	return createdUser, nil
 }
 
-func (r *UserRepo) GetUsers(ctx context.Context,  page, limit int) ([]models.User, error) {
+func (r *UserRepo) GetUsers(ctx context.Context, page, limit int) ([]models.User, int64, error) {
+	// 1. Gettig total count
+	var total int64
+	countQuery := "SELECT COUNT(*) FROM users"
+	if err := r.db.QueryRowContext(ctx, countQuery).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("failed to count users: %w", err)
+	}
+
+	// Если записей нет, нет смысла делать второй запрос
+	if total == 0 {
+		return []models.User{}, 0, nil
+	}
+
+	// 2. Getting page datas
 	offset := (page - 1) * limit
 
 	query := "SELECT user_id, user_name, created_at FROM users ORDER BY user_name LIMIT $1 OFFSET $2"
@@ -51,7 +64,7 @@ func (r *UserRepo) GetUsers(ctx context.Context,  page, limit int) ([]models.Use
 
 	sqlRows, err := r.db.QueryContext(ctx, query, limit, offset)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get users: %w", err)
+		return nil, 0, fmt.Errorf("failed to get users: %w", err)
 	}
 	defer sqlRows.Close()
 
@@ -59,13 +72,13 @@ func (r *UserRepo) GetUsers(ctx context.Context,  page, limit int) ([]models.Use
 		var user models.User
 
 		if err := sqlRows.Scan(&user.ID, &user.UserName, &user.CreatedAt); err != nil {
-			return nil, fmt.Errorf("ошибка сканирования строки: %w", err)
+			return nil, 0, fmt.Errorf("ошибка сканирования строки: %w", err)
 		}
 
 		users = append(users, user)
 
 	}
-	return users, nil
+	return users, total, nil
 }
 
 func (r *UserRepo) GetUserByID(ctx context.Context, id int) (models.User, error) {
@@ -84,51 +97,89 @@ func (r *UserRepo) GetUserByID(ctx context.Context, id int) (models.User, error)
 	return user, nil
 }
 
-func (r *UserRepo) GetUserFriends(ctx context.Context, id int) ([]models.User, error) {
-	var users []models.User
+func (r *UserRepo) GetUserFriends(ctx context.Context, userID, page, limit int) ([]models.User, int64, error) {
 
-	query := `
+	// 1. Gettig total count
+	var total int64
+	countQuery := `
+		SELECT COUNT(*)
+		FROM
+		    follows f1
+		JOIN
+		    follows f2 ON f1.follower_id = f2.following_id AND f1.following_id = f2.follower_id
+		WHERE
+		    f1.follower_id = $1;
+	`
+	if err := r.db.QueryRowContext(ctx, countQuery, userID).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("failed to count users: %w", err)
+	}
+
+	// Если записей нет, нет смысла делать второй запрос
+	if total == 0 {
+		return []models.User{}, 0, nil
+	}
+
+	offset := (page - 1) * limit
+
+	dataQuery := `
 		SELECT
 		    u.user_id,
 		    u.user_name,
 		    u.created_at
 		FROM
-		    -- Начинаем с первой "копии" таблицы follows, чтобы найти, на кого подписан наш пользователь ($1).
-		    -- Назовем ее f1 (follows 1).
 		    follows f1
 		JOIN
-		    -- Присоединяем вторую "копию" таблицы follows.
-		    -- Назовем ее f2 (follows 2).
-		    -- Это нужно, чтобы проверить ОБРАТНУЮ подписку.
 		    follows f2 ON f1.follower_id = f2.following_id AND f1.following_id = f2.follower_id
 		JOIN
-		    -- И только теперь присоединяем таблицу users, чтобы получить информацию о друге.
 		    users u ON u.user_id = f1.following_id
 		WHERE
-		    -- Условие: мы ищем подписки, сделанные нашим пользователем ($1).
 		    f1.follower_id = $1;
+		ORDER BY
+		    u.user_name -- <-- ВАЖНО: Пагинация без сортировки не имеет смысла!
+		LIMIT $2 OFFSET $3; -- <-- Новые параметры
 	`
 
-	sqlRows, err := r.db.QueryContext(ctx, query, id)
+	sqlRows, err := r.db.QueryContext(ctx, dataQuery, userID, limit, offset)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user friends: %w", err)
+		return nil, 0, fmt.Errorf("failed to get user friends: %w", err)
 	}
+
+	defer sqlRows.Close()
+
+	var users []models.User
 
 	for sqlRows.Next() {
 		var user models.User
 
 		if err := sqlRows.Scan(&user.ID, &user.UserName, &user.CreatedAt); err != nil {
-			return nil, fmt.Errorf("ошибка сканирования строки: %w", err)
+			return nil, 0, fmt.Errorf("ошибка сканирования строки: %w", err)
 		}
 		users = append(users, user)
 	}
-	return users, nil
+	return users, total, nil
 }
 
-func (r *UserRepo) GetUserFollowers(ctx context.Context, id int) ([]models.User, error) {
-	var users []models.User
+func (r *UserRepo) GetUserFollowers(ctx context.Context, userID, page, limit int) ([]models.User, int64, error) {
+	var total int64
 
-	query := `
+	countQuery := `
+		SELECT COUNT(*)
+		FROM
+		    follows f
+		WHERE
+		    f.following_id = $1;
+	`
+	if err := r.db.QueryRowContext(ctx, countQuery, userID).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("failed to count users: %w", err)
+	}
+
+	if total == 0 {
+		return []models.User{}, 0, nil
+	}
+
+	offset := (page - 1) * limit
+
+	dataQuery := `
 		SELECT
 		    u.user_id,
 		    u.user_name,
@@ -138,27 +189,56 @@ func (r *UserRepo) GetUserFollowers(ctx context.Context, id int) ([]models.User,
 		JOIN
 		    users u ON u.user_id = f.follower_id
 		WHERE
-		    -- Условие: мы ищем тех, кто подписан на user.
 		    f.following_id = $1;
+		ORDER BY
+			u.user_name 
+		LIMIT $2 OFFSET $3;
 	`
 
-	sqlRows, err := r.db.QueryContext(ctx, query, id)
+	sqlRows, err := r.db.QueryContext(ctx, dataQuery, userID, limit, offset)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user friends: %w", err)
+		return nil, 0, fmt.Errorf("failed to get user friends: %w", err)
 	}
+
+	defer sqlRows.Close()
+
+	var users []models.User
 
 	for sqlRows.Next() {
 		var user models.User
 
 		if err := sqlRows.Scan(&user.ID, &user.UserName, &user.CreatedAt); err != nil {
-			return nil, fmt.Errorf("ошибка сканирования строки: %w", err)
+			return nil, 0, fmt.Errorf("ошибка сканирования строки: %w", err)
 		}
 		users = append(users, user)
 	}
-	return users, nil
+	return users, total, nil
 }
 
-func (r *UserRepo) GetUserFollowings(ctx context.Context, id int) ([]models.User, error) {
+func (r *UserRepo) GetUserFollowings(ctx context.Context, userID, page, limit int) ([]models.User, int64, error) {
+
+	// 1
+	var total int64
+
+	countQuery := `
+		SELECT COUNT(*)
+		FROM
+		    follows f
+		WHERE
+		    f.follower_id = $1;
+	`
+
+	if err := r.db.QueryRowContext(ctx, countQuery, userID).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("failed to count users: %w", err)
+	}
+
+	if total == 0 {
+		return []models.User{}, 0, nil
+	}
+
+	// 2.
+	offset := (page - 1) * limit
+
 	var users []models.User
 
 	query := `
@@ -173,22 +253,25 @@ func (r *UserRepo) GetUserFollowings(ctx context.Context, id int) ([]models.User
 		WHERE
 		    -- Условие: мы ищем тех, на кого подписан user ($1).
 		    f.follower_id = $1;
+		ORDER BY
+			u.user_name
+		LIMIT $2 OFFSET $3;
 	`
 
-	sqlRows, err := r.db.QueryContext(ctx, query, id)
+	sqlRows, err := r.db.QueryContext(ctx, query, userID, limit, offset)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user friends: %w", err)
+		return nil, 0, fmt.Errorf("failed to get user friends: %w", err)
 	}
 
 	for sqlRows.Next() {
 		var user models.User
 
 		if err := sqlRows.Scan(&user.ID, &user.UserName, &user.CreatedAt); err != nil {
-			return nil, fmt.Errorf("ошибка сканирования строки: %w", err)
+			return nil, 0, fmt.Errorf("ошибка сканирования строки: %w", err)
 		}
 		users = append(users, user)
 	}
-	return users, nil
+	return users, total, nil
 }
 
 // FindUserByEmail ищет пользователя по email. Возвращает хеш пароля для проверки в сервисе.
