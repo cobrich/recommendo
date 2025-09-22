@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -13,7 +14,7 @@ import (
 )
 
 type FollowHandler struct {
-	s *service.FollowService
+	s      *service.FollowService
 	logger *slog.Logger
 }
 
@@ -53,7 +54,7 @@ func (h *FollowHandler) CreateFollow(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(dtos.StatusResponseDTO{Status: "following was successful"})
 }
 
-func (h *FollowHandler) DeleteFollow(w http.ResponseWriter, r *http.Request) {
+func (h *FollowHandler) DeleteMyFollow(w http.ResponseWriter, r *http.Request) {
 	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
 	if !ok {
 		http.Error(w, "Could not retrieve user ID from context", http.StatusInternalServerError)
@@ -70,7 +71,45 @@ func (h *FollowHandler) DeleteFollow(w http.ResponseWriter, r *http.Request) {
 
 	err = h.s.DeleteFollow(r.Context(), currentUserID, targetUserID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if errors.Is(err, service.ErrFollowNotFound) {
+			// Если пользователь пытается удалить подписчика, которого нет
+			http.Error(w, err.Error(), http.StatusNotFound) // 404 Not Found
+		} else {
+			// Все остальные ошибки - это 500
+			h.logger.Error("Failed to remove follower", "error", err, "removerID", currentUserID, "targetID", targetUserID)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *FollowHandler) DeleteMeFollow(w http.ResponseWriter, r *http.Request) {
+	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Could not retrieve user ID from context", http.StatusInternalServerError)
+		return
+	}
+
+	targetUserIDStr := chi.URLParam(r, "targetUserID")
+	targetUserID, err := strconv.Atoi(targetUserIDStr)
+
+	if currentUserID <= 0 || targetUserID <= 0 {
+		http.Error(w, "User IDs must be positive integers", http.StatusBadRequest)
+		return
+	}
+
+	err = h.s.DeleteFollow(r.Context(), targetUserID, currentUserID)
+	if err != nil {
+		if errors.Is(err, service.ErrFollowNotFound) {
+			// Если пользователь пытается удалить подписчика, которого нет
+			http.Error(w, err.Error(), http.StatusNotFound) // 404 Not Found
+		} else {
+			// Все остальные ошибки - это 500
+			h.logger.Error("Failed to remove follower", "error", err, "removerID", currentUserID, "targetID", targetUserID)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+		}
 		return
 	}
 

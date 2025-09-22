@@ -58,7 +58,7 @@ func (r *FollowRepo) DeleteFollow(ctx context.Context, followerID, followingID i
 		return fmt.Errorf("failed to check rows affected: %w", err)
 	}
 	if rowsAffected == 0 {
-		return fmt.Errorf("follow relationship not found")
+		return sql.ErrNoRows
 	}
 
 	return nil

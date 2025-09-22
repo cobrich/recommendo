@@ -16,7 +16,7 @@ func NewRouter(userHandler *handlers.UserHandler, followHandler *handlers.Follow
 	router.Use(middleware.NewRecoverer(logger))
 
 	router.Use(middleware.NewLogger(logger))
-	
+
 	// Auth Routes
 	router.Post("/register", userHandler.RegisterUser)
 	router.Post("/login", userHandler.LoginUser)
@@ -27,19 +27,20 @@ func NewRouter(userHandler *handlers.UserHandler, followHandler *handlers.Follow
 		// POST /follows - create following
 		r.Post("/follows", followHandler.CreateFollow)
 		// DELETE /follows - delete following
-		r.Delete("/follows/{targetUserID}", followHandler.DeleteFollow)
+		r.Delete("/follows/{targetUserID}", followHandler.DeleteMyFollow)
 
 		r.Post("/recommendations", recommendationHandler.CreateRecommendation)
 
 		r.Get("/users", userHandler.GetUsers)
-	
+
 		// --- User Routes ---
 		r.Get("/me", userHandler.GetCurrentUser)
 
 		// --- Follow/Friendship Routes ---
 		r.Get("/me/friends", userHandler.GetUserFriends)
-		
+
 		r.Get("/me/followers", userHandler.GetUserFollowers)
+		r.Delete("/me/followers/{targetUserID}", followHandler.DeleteMeFollow)
 
 		r.Get("/me/followings", userHandler.GetUserFollowings)
 

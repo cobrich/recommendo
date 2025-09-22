@@ -2,10 +2,14 @@ package service
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"log/slog"
 
 	"github.com/cobrich/recommendo/repo"
 )
+
+var ErrFollowNotFound = errors.New("follow relationship not found")
 
 type FollowService struct {
 	r      *repo.FollowRepo
@@ -27,6 +31,11 @@ func (s *FollowService) CreateFollow(ctx context.Context, fromId, toID int) erro
 func (s *FollowService) DeleteFollow(ctx context.Context, fromId, toID int) error {
 	err := s.r.DeleteFollow(ctx, fromId, toID)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// И переводит ее в понятную для хендлера ошибку бизнес-логики
+			return ErrFollowNotFound
+		}
+		// Все остальные ошибки пробрасываем как есть (это могут быть ошибки БД)
 		return err
 	}
 	return nil
