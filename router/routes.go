@@ -7,11 +7,26 @@ import (
 	"github.com/cobrich/recommendo/handlers"
 	"github.com/cobrich/recommendo/middleware"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/cors"
 )
 
 func NewRouter(userHandler *handlers.UserHandler, followHandler *handlers.FollowHandler,
 	mediaHandler *handlers.MediaHandler, recommendationHandler *handlers.RecommendationHandler, logger *slog.Logger) http.Handler {
 	router := chi.NewRouter()
+
+	router.Use(cors.Handler(cors.Options{
+		// Укажите, с какого источника разрешены запросы.
+		// Для разработки идеально подходит адрес вашего Vite dev-сервера.
+		AllowedOrigins: []string{"http://localhost:5173"},
+		// Разрешенные методы
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
+		// Разрешенные заголовки
+		AllowedHeaders: []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		// Разрешаем отправку cookies (если понадобится в будущем)
+		AllowCredentials: true,
+		// Время жизни preflight-запроса в секундах
+		MaxAge: 300,
+	}))
 
 	router.Use(middleware.NewRecoverer(logger))
 
@@ -42,15 +57,15 @@ func NewRouter(userHandler *handlers.UserHandler, followHandler *handlers.Follow
 		r.Get("/users/{userID}/followers", userHandler.GetUserFollowers)
 		r.Get("/users/{userID}/followings", userHandler.GetUserFollowings)
 		r.Get("/users/{userID}/friends", userHandler.GetUserFriends)
-		
+
 		// --- Follow/Friendship Routes ---
 		r.Get("/me/friends", userHandler.GetCurrentUserFriends)
-		
+
 		r.Get("/me/followers", userHandler.GetCurrentUserFollowers)
 		r.Delete("/me/followers/{targetUserID}", followHandler.DeleteMeFollow)
-		
+
 		r.Get("/me/followings", userHandler.GetCurrentUserFollowings)
-		
+
 		// --- Recommendation Routes ---
 		r.Get("/me/recommandations", recommendationHandler.GetCurrentUserRecommendations)
 		r.Get("/users/{userID}/recommandations", recommendationHandler.GetUserRecommendations)

@@ -23,28 +23,33 @@ func NewUserHandler(userService *service.UserService, logger *slog.Logger) *User
 	return &UserHandler{s: userService, logger: logger}
 }
 
-
 // Registering user
 func (h *UserHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
+	h.logger.Info("RegisterUser: Starting registration process")
+
 	var registerDTO dtos.RegisterUserDTO
 	if err := json.NewDecoder(r.Body).Decode(&registerDTO); err != nil {
-		// Если JSON невалидный - это ошибка клиента
+		h.logger.Error("RegisterUser: Failed to decode JSON", "error", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
+	h.logger.Info("RegisterUser: Received registration data", "user_name", registerDTO.UserName, "email", registerDTO.Email)
+
 	createdUser, err := h.s.Register(r.Context(), registerDTO)
 	if err != nil {
+		h.logger.Error("RegisterUser: Registration failed", "error", err, "user_name", registerDTO.UserName, "email", registerDTO.Email)
 		// Проверяем тип ошибки из сервиса
 		if errors.Is(err, service.ErrUserExists) {
 			http.Error(w, err.Error(), http.StatusConflict) // 409 Conflict
 		} else {
 			// Логируем полную ошибку для себя, а пользователю даем общее сообщение
-			// log.Printf("Internal error on user registration: %v", err)
 			http.Error(w, "Could not process request", http.StatusInternalServerError)
 		}
 		return
 	}
+
+	h.logger.Info("RegisterUser: User created successfully", "user_id", createdUser.ID, "user_name", createdUser.UserName)
 
 	responseDTO := dtos.UserResponseDTO{
 		ID:        createdUser.ID,
@@ -151,7 +156,6 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-
 // Getting user friends
 func (h *UserHandler) GetCurrentUserFriends(w http.ResponseWriter, r *http.Request) {
 
@@ -212,7 +216,6 @@ func (h *UserHandler) GetUserFriends(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(paginatedResponse)
 }
-
 
 // Getting user followers
 func (h *UserHandler) GetCurrentUserFollowers(w http.ResponseWriter, r *http.Request) {
@@ -276,7 +279,6 @@ func (h *UserHandler) GetUserFollowers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(paginatedResponse)
 }
 
-
 // Getting user followings
 func (h *UserHandler) GetCurrentUserFollowings(w http.ResponseWriter, r *http.Request) {
 
@@ -339,7 +341,6 @@ func (h *UserHandler) GetUserFollowings(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(paginatedResponse)
 }
 
-
 // Deleting user
 func (h *UserHandler) DeleteCurrentUser(w http.ResponseWriter, r *http.Request) {
 	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
@@ -357,7 +358,6 @@ func (h *UserHandler) DeleteCurrentUser(w http.ResponseWriter, r *http.Request) 
 
 	w.WriteHeader(http.StatusNoContent)
 }
-
 
 // Updating user
 func (h *UserHandler) UpdateCurrentUser(w http.ResponseWriter, r *http.Request) {
@@ -403,7 +403,6 @@ func (h *UserHandler) UpdateCurrentUser(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(responseDTO)
 }
 
-
 // Changing user password
 func (h *UserHandler) ChangeCurrentUserPassword(w http.ResponseWriter, r *http.Request) {
 	// 1. Get current user id
@@ -446,6 +445,3 @@ func (h *UserHandler) ChangeCurrentUserPassword(w http.ResponseWriter, r *http.R
 
 	w.WriteHeader(http.StatusNoContent)
 }
-
-
-

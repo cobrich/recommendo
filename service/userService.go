@@ -42,32 +42,39 @@ func NewUserService(db *sql.DB, userRepo *repo.UserRepo, followRepo *repo.Follow
 }
 
 func (s *UserService) Register(ctx context.Context, registerDTO dtos.RegisterUserDTO) (models.User, error) {
+	s.logger.Info("Register: Starting user registration", "user_name", registerDTO.UserName, "email", registerDTO.Email)
+
 	// 1. Validation fields
 	email, err := utils.CleanAndValidateEmail(registerDTO.Email)
 	if err != nil {
+		s.logger.Error("Register: Email validation failed", "error", err, "email", registerDTO.Email)
 		return models.User{}, err
-
 	}
+
 	isValid, errs := utils.ValidatePassword(registerDTO.Password)
 	if !isValid {
+		s.logger.Error("Register: Password validation failed", "error", errs)
 		return models.User{}, errs
 	}
 
 	// 2. Проверка, что пользователь не существует (КРИТИЧЕСКИЙ ШАГ)
+	s.logger.Info("Register: Checking if user exists", "email", email)
 	_, err = s.r.FindUserByEmail(ctx, email)
 	if err == nil {
-		// Ошибки не было, значит пользователь найден
+		s.logger.Warn("Register: User already exists", "email", email)
 		return models.User{}, ErrUserExists
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
-		// Произошла другая ошибка, не "не найдено"
+		s.logger.Error("Register: Database error while checking user existence", "error", err, "email", email)
 		return models.User{}, err
 	}
-	// Если err == sql.ErrNoRows, то все отлично, можно продолжать.
+	s.logger.Info("Register: User does not exist, proceeding with creation")
 
 	// 3. Hashing password
+	s.logger.Info("Register: Hashing password")
 	hashedPassword, err := utils.GetPasswordHash(registerDTO.Password)
 	if err != nil {
+		s.logger.Error("Register: Password hashing failed", "error", err)
 		return models.User{}, err
 	}
 
@@ -79,11 +86,14 @@ func (s *UserService) Register(ctx context.Context, registerDTO dtos.RegisterUse
 	}
 
 	// 5. Сохранение в репозитории
+	s.logger.Info("Register: Creating user in database", "user_name", userToCreate.UserName, "email", userToCreate.Email)
 	createdUser, err := s.r.CreateUser(ctx, userToCreate)
 	if err != nil {
+		s.logger.Error("Register: Failed to create user in database", "error", err, "user_name", userToCreate.UserName, "email", userToCreate.Email)
 		return models.User{}, err
 	}
 
+	s.logger.Info("Register: User created successfully", "user_id", createdUser.ID, "user_name", createdUser.UserName, "email", createdUser.Email)
 	return createdUser, nil
 }
 
