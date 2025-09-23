@@ -36,6 +36,10 @@ func NewRouter(userHandler *handlers.UserHandler, followHandler *handlers.Follow
 	router.Post("/register", userHandler.RegisterUser)
 	router.Post("/login", userHandler.LoginUser)
 	router.Get("/users", userHandler.GetUsers)
+	router.Get("/users/{userID}", userHandler.GetUserByID)
+	router.Get("/users/{userID}/followers", userHandler.GetUserFollowers)
+	router.Get("/users/{userID}/followings", userHandler.GetUserFollowings)
+	router.Get("/users/{userID}/friends", userHandler.GetUserFriends)
 
 	router.Group(func(r chi.Router) {
 		r.Use(middleware.JWTAuthenticator)
@@ -53,11 +57,6 @@ func NewRouter(userHandler *handlers.UserHandler, followHandler *handlers.Follow
 		r.Patch("/me", userHandler.UpdateCurrentUser)
 		r.Put("/me/password", userHandler.ChangeCurrentUserPassword)
 
-		r.Get("/users/{userID}", userHandler.GetUserByID)
-		r.Get("/users/{userID}/followers", userHandler.GetUserFollowers)
-		r.Get("/users/{userID}/followings", userHandler.GetUserFollowings)
-		r.Get("/users/{userID}/friends", userHandler.GetUserFriends)
-
 		// --- Follow/Friendship Routes ---
 		r.Get("/me/friends", userHandler.GetCurrentUserFriends)
 
@@ -67,9 +66,9 @@ func NewRouter(userHandler *handlers.UserHandler, followHandler *handlers.Follow
 		r.Get("/me/followings", userHandler.GetCurrentUserFollowings)
 
 		// --- Recommendation Routes ---
-		r.Get("/me/recommandations", recommendationHandler.GetCurrentUserRecommendations)
-		r.Get("/users/{userID}/recommandations", recommendationHandler.GetUserRecommendations)
-		r.Delete("/me/recommandations/{recommendation_id}", recommendationHandler.DeleteRecommendation)
+		r.Get("/me/recommendations", recommendationHandler.GetCurrentUserRecommendations)
+		r.Get("/users/{userID}/recommendations", recommendationHandler.GetUserRecommendations)
+		r.Delete("/me/recommendations/{recommendation_id}", recommendationHandler.DeleteRecommendation)
 
 		r.Get("/media", mediaHandler.GetMedia)
 
